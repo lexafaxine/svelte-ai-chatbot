@@ -2,7 +2,6 @@ import type { Conversation, Message } from '$lib/types';
 
 const CONVERSATIONS_KEY = 'chat:conversations';
 const MESSAGES_KEY = 'chat:messages';
-const ACTIVE_CONVERSATION_KEY = 'chat:activeConversationId';
 const API_KEY_KEY = 'chat:openrouterKey';
 
 function isBrowser(): boolean {
@@ -42,14 +41,6 @@ export function loadMessages(): Message[] {
 
 export function saveMessages(messages: Message[]): void {
 	write(MESSAGES_KEY, messages);
-}
-
-export function loadActiveConversationId(): string | null {
-	return read<string | null>(ACTIVE_CONVERSATION_KEY, null);
-}
-
-export function saveActiveConversationId(id: string | null): void {
-	write(ACTIVE_CONVERSATION_KEY, id);
 }
 
 export function loadApiKey(): string | null {

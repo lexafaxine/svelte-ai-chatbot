@@ -4,7 +4,6 @@ import type { Message } from '$lib/types';
 
 function msg(overrides: Partial<Message> & { id: string }): Message {
 	return {
-		id: overrides.id,
 		conversationId: 'c1',
 		parentId: null,
 		role: 'user',

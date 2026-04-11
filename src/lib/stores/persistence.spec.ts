@@ -74,26 +74,6 @@ describe('messages persistence', () => {
 	});
 });
 
-describe('active conversation id persistence', () => {
-	it('defaults to null', async () => {
-		const { loadActiveConversationId } = await importPersistence();
-		expect(loadActiveConversationId()).toBeNull();
-	});
-
-	it('round-trips the active id', async () => {
-		const { loadActiveConversationId, saveActiveConversationId } = await importPersistence();
-		saveActiveConversationId('c1');
-		expect(loadActiveConversationId()).toBe('c1');
-	});
-
-	it('can be cleared back to null', async () => {
-		const { loadActiveConversationId, saveActiveConversationId } = await importPersistence();
-		saveActiveConversationId('c1');
-		saveActiveConversationId(null);
-		expect(loadActiveConversationId()).toBeNull();
-	});
-});
-
 describe('api key persistence', () => {
 	it('returns null when no key stored', async () => {
 		const { loadApiKey } = await importPersistence();
