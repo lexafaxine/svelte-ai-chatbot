@@ -53,7 +53,7 @@
 		"vitest-browser-svelte": "^2.1.0"
 	},
 	"dependencies": {
-		"@ai-sdk/anthropic": "^3.0.69",
+		"@openrouter/ai-sdk-provider": "^2.5.1",
 		"ai": "^6.0.158",
 		"dompurify": "^3.3.3",
 		"highlight.js": "^11.11.1",

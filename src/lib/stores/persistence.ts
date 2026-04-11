@@ -1,0 +1,64 @@
+import type { Conversation, Message } from '$lib/types';
+
+const CONVERSATIONS_KEY = 'chat:conversations';
+const MESSAGES_KEY = 'chat:messages';
+const ACTIVE_CONVERSATION_KEY = 'chat:activeConversationId';
+const API_KEY_KEY = 'chat:openrouterKey';
+
+function isBrowser(): boolean {
+	return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+}
+
+function read<T>(key: string, fallback: T): T {
+	if (!isBrowser()) return fallback;
+	try {
+		const raw = localStorage.getItem(key);
+		return raw ? (JSON.parse(raw) as T) : fallback;
+	} catch {
+		return fallback;
+	}
+}
+
+function write(key: string, value: unknown): void {
+	if (!isBrowser()) return;
+	try {
+		localStorage.setItem(key, JSON.stringify(value));
+	} catch {
+		// localStorage full / disabled — silently drop; UI state stays in memory
+	}
+}
+
+export function loadConversations(): Conversation[] {
+	return read<Conversation[]>(CONVERSATIONS_KEY, []);
+}
+
+export function saveConversations(conversations: Conversation[]): void {
+	write(CONVERSATIONS_KEY, conversations);
+}
+
+export function loadMessages(): Message[] {
+	return read<Message[]>(MESSAGES_KEY, []);
+}
+
+export function saveMessages(messages: Message[]): void {
+	write(MESSAGES_KEY, messages);
+}
+
+export function loadActiveConversationId(): string | null {
+	return read<string | null>(ACTIVE_CONVERSATION_KEY, null);
+}
+
+export function saveActiveConversationId(id: string | null): void {
+	write(ACTIVE_CONVERSATION_KEY, id);
+}
+
+export function loadApiKey(): string | null {
+	if (!isBrowser()) return null;
+	return localStorage.getItem(API_KEY_KEY);
+}
+
+export function saveApiKey(key: string | null): void {
+	if (!isBrowser()) return;
+	if (key) localStorage.setItem(API_KEY_KEY, key);
+	else localStorage.removeItem(API_KEY_KEY);
+}
