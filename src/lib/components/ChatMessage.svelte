@@ -80,7 +80,7 @@
 					<PencilIcon class="h-3.5 w-3.5" />
 				</Button>
 				<div
-					class="max-w-[80%] rounded-2xl bg-primary px-4 py-2 whitespace-pre-wrap text-primary-foreground"
+					class="max-w-[90%] rounded-2xl bg-primary px-4 py-2 whitespace-pre-wrap text-primary-foreground"
 				>
 					{message.content}
 				</div>
@@ -165,9 +165,9 @@
 		{/if}
 
 		{#if hasContent}
-			<div class="max-w-[80%] rounded-2xl bg-muted px-4 py-2 text-foreground">
+			<div class="max-w-[80%] text-foreground">
 				<div
-					class="prose prose-sm max-w-none [--tw-prose-invert-pre-bg:transparent] [--tw-prose-pre-bg:transparent] dark:prose-invert"
+					class="prose prose-sm max-w-none dark:prose-invert [&_pre]:rounded-lg [&_pre]:bg-muted"
 				>
 					<!-- safe: renderMarkdown sanitizes with DOMPurify before returning -->
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
