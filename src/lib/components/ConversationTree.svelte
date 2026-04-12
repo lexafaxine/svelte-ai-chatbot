@@ -101,7 +101,7 @@
 				Click a leaf node to switch to that conversation path.
 			</Dialog.Description>
 		</Dialog.Header>
-		<div class="overflow-y-auto overflow-x-auto max-h-[60vh] py-2">
+		<div class="max-h-[60vh] overflow-x-auto overflow-y-auto py-2">
 			{#snippet renderNode(node: TreeNode, depth: number)}
 				{@const isActive = activePathIds.has(node.message.id)}
 				{@const leaf = isLeaf(node)}
@@ -124,7 +124,7 @@
 					{/if}
 					<button
 						type="button"
-						class="flex min-w-0 items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-sm cursor-pointer hover:bg-muted {isActiveLeaf
+						class="flex min-w-0 cursor-pointer items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-sm hover:bg-muted {isActiveLeaf
 							? 'bg-primary/15 font-medium text-primary'
 							: isActive
 								? 'bg-muted/60 text-foreground'

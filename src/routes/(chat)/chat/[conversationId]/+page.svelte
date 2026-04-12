@@ -76,11 +76,7 @@
 <div class="flex flex-1 flex-col overflow-hidden">
 	{#if conversation}
 		<div class="flex items-center justify-end border-b border-border px-4 py-1">
-			<ConversationTree
-				{conversation}
-				messages={chat.messages}
-				onSelectPath={handleSelectPath}
-			/>
+			<ConversationTree {conversation} messages={chat.messages} onSelectPath={handleSelectPath} />
 		</div>
 	{/if}
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto">
