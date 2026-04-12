@@ -3,7 +3,13 @@ import { browser } from '$app/environment';
 import type { Conversation, Message, Role } from '$lib/types';
 import { DEFAULT_MODEL } from '$lib/config/models';
 import { getActivePath } from '$lib/utils/message-tree';
-import { loadConversations, saveConversations, loadMessages, saveMessages } from './persistence';
+import {
+	loadConversations,
+	saveConversations,
+	loadMessages,
+	saveMessages,
+	loadApiKey
+} from './persistence';
 
 type StreamEvent =
 	| { type: 'text'; delta: string }
@@ -143,9 +149,13 @@ function createChatStore() {
 		let serverError: string | null = null;
 
 		try {
+			const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+			const apiKey = loadApiKey();
+			if (apiKey) headers['x-openrouter-key'] = apiKey;
+
 			const response = await fetch('/api/chat', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers,
 				body: JSON.stringify({ messages: pathUpToUser, model: conversation.model }),
 				signal: abort.signal
 			});
