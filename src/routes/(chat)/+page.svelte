@@ -7,13 +7,7 @@
 
 	async function handleSubmit(content: string) {
 		const conversation = chat.createConversation(DEFAULT_MODEL);
-		const userMsg = chat.appendMessage(
-			conversation.id,
-			'user',
-			content,
-			null,
-			conversation.model
-		);
+		const userMsg = chat.appendMessage(conversation.id, 'user', content, null, conversation.model);
 		chat.streamReply(conversation.id, userMsg.id);
 		await goto(resolve('/(chat)/chat/[conversationId]', { conversationId: conversation.id }));
 	}

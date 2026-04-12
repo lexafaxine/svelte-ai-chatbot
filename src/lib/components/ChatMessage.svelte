@@ -24,7 +24,7 @@
 {#if isUser}
 	<div class="flex w-full justify-end">
 		<div
-			class="bg-primary text-primary-foreground max-w-[80%] rounded-2xl px-4 py-2 whitespace-pre-wrap"
+			class="max-w-[80%] rounded-2xl bg-primary px-4 py-2 whitespace-pre-wrap text-primary-foreground"
 		>
 			{message.content}
 		</div>
@@ -32,7 +32,7 @@
 {:else}
 	<div class="flex w-full flex-col items-start gap-2">
 		{#if showPending}
-			<div class="text-muted-foreground flex items-center gap-2 px-2" aria-live="polite">
+			<div class="flex items-center gap-2 px-2 text-muted-foreground" aria-live="polite">
 				<svg class="h-3 w-8" viewBox="0 0 40 10" aria-hidden="true">
 					<circle cx="5" cy="5" r="3" fill="currentColor">
 						<animate
@@ -68,20 +68,26 @@
 
 		{#if hasReasoning}
 			<details class="w-full max-w-[80%]" open={reasoningOpen}>
-				<summary class="text-muted-foreground cursor-pointer text-sm select-none">
+				<summary class="cursor-pointer text-sm text-muted-foreground select-none">
 					{isStreaming && !hasContent ? 'Thinking…' : 'Thoughts'}
 				</summary>
 				<div
-					class="text-muted-foreground border-muted prose prose-sm mt-2 max-w-none border-l-2 pl-3 text-sm"
+					class="prose prose-sm mt-2 max-w-none border-l-2 border-muted pl-3 text-sm text-muted-foreground [--tw-prose-invert-pre-bg:transparent] [--tw-prose-pre-bg:transparent] dark:prose-invert"
 				>
+					<!-- safe: renderMarkdown sanitizes with DOMPurify before returning -->
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 					{@html renderedReasoning}
 				</div>
 			</details>
 		{/if}
 
 		{#if hasContent}
-			<div class="bg-muted text-foreground max-w-[80%] rounded-2xl px-4 py-2">
-				<div class="prose prose-sm max-w-none">
+			<div class="max-w-[80%] rounded-2xl bg-muted px-4 py-2 text-foreground">
+				<div
+					class="prose prose-sm max-w-none [--tw-prose-invert-pre-bg:transparent] [--tw-prose-pre-bg:transparent] dark:prose-invert"
+				>
+					<!-- safe: renderMarkdown sanitizes with DOMPurify before returning -->
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 					{@html renderedContent}
 				</div>
 				{#if isStreaming}

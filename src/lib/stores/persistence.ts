@@ -3,6 +3,9 @@ import type { Conversation, Message } from '$lib/types';
 const CONVERSATIONS_KEY = 'chat:conversations';
 const MESSAGES_KEY = 'chat:messages';
 const API_KEY_KEY = 'chat:openrouterKey';
+const THEME_KEY = 'chat:theme';
+
+export type Theme = 'light' | 'dark';
 
 function isBrowser(): boolean {
 	return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
@@ -52,4 +55,15 @@ export function saveApiKey(key: string | null): void {
 	if (!isBrowser()) return;
 	if (key) localStorage.setItem(API_KEY_KEY, key);
 	else localStorage.removeItem(API_KEY_KEY);
+}
+
+export function loadTheme(): Theme | null {
+	if (!isBrowser()) return null;
+	const raw = localStorage.getItem(THEME_KEY);
+	return raw === 'dark' || raw === 'light' ? raw : null;
+}
+
+export function saveTheme(theme: Theme): void {
+	if (!isBrowser()) return;
+	localStorage.setItem(THEME_KEY, theme);
 }

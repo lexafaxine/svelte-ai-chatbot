@@ -49,8 +49,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					} else if (part.type === 'reasoning-delta') {
 						send({ type: 'reasoning', delta: part.text });
 					} else if (part.type === 'error') {
-						const message =
-							part.error instanceof Error ? part.error.message : String(part.error);
+						const message = part.error instanceof Error ? part.error.message : String(part.error);
 						send({ type: 'error', message });
 					}
 				}

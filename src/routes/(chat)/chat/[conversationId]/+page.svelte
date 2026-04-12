@@ -43,32 +43,23 @@
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto">
 		<div class="mx-auto flex w-full max-w-3xl flex-col gap-4 p-6">
 			{#each activePath as message (message.id)}
-				<ChatMessage
-					{message}
-					isStreaming={message.id === chat.streamingMessageId}
-				/>
+				<ChatMessage {message} isStreaming={message.id === chat.streamingMessageId} />
 			{/each}
 			{#if chat.streamError}
-				<div class="text-destructive rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+				<div
+					class="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
+				>
 					{chat.streamError}
-					<button
-						type="button"
-						class="ml-2 underline"
-						onclick={() => chat.clearStreamError()}
-					>
+					<button type="button" class="ml-2 underline" onclick={() => chat.clearStreamError()}>
 						Dismiss
 					</button>
 				</div>
 			{/if}
 		</div>
 	</div>
-	<div class="border-border border-t">
+	<div class="border-t border-border">
 		<div class="mx-auto w-full max-w-3xl">
-			<ChatInput
-				onSubmit={handleSubmit}
-				{isStreaming}
-				onStop={() => chat.stopStreaming()}
-			/>
+			<ChatInput onSubmit={handleSubmit} {isStreaming} onStop={() => chat.stopStreaming()} />
 		</div>
 	</div>
 </div>

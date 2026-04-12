@@ -1,9 +1,11 @@
 # AI Chatbot - Project Plan
 
 ## Overview
+
 Build a ChatGPT-like AI chatbot web application using SvelteKit + Svelte 5.
 
 ## Tech Stack
+
 - **Framework**: SvelteKit (Svelte 5, runes mode)
 - **UI Library**: shadcn-svelte (v5)
 - **AI SDK**: Vercel AI SDK (`ai` + `@openrouter/ai-sdk-provider`) — all models are accessed through OpenRouter
@@ -20,22 +22,22 @@ The core data structure is a **message tree**, not a flat array. The tree shape 
 
 ```ts
 interface Message {
-  id: string                   // nanoid
-  conversationId: string
-  parentId: string | null      // null = root message
-  role: 'user' | 'assistant'
-  content: string
-  model: string                // e.g. 'claude-sonnet-4-20250514'
-  createdAt: number
+	id: string; // nanoid
+	conversationId: string;
+	parentId: string | null; // null = root message
+	role: 'user' | 'assistant';
+	content: string;
+	model: string; // e.g. 'claude-sonnet-4-20250514'
+	createdAt: number;
 }
 
 interface Conversation {
-  id: string
-  title: string
-  model: string                // current default model for this conversation
-  tailId: string | null        // current leaf — the visible path is obtained by walking parentIds up from here
-  createdAt: number
-  updatedAt: number
+	id: string;
+	title: string;
+	model: string; // current default model for this conversation
+	tailId: string | null; // current leaf — the visible path is obtained by walking parentIds up from here
+	createdAt: number;
+	updatedAt: number;
 }
 ```
 
@@ -98,12 +100,14 @@ Use `@ai-sdk/anthropic` provider. The endpoint receives the active message path 
 ## Features Checklist
 
 ### Core
+
 - [ ] Chat with streaming AI responses
 - [ ] Create / switch / delete conversations
 - [ ] Markdown rendering with code syntax highlighting
 - [ ] Persist conversations in localStorage
 
 ### Extended
+
 - [ ] Export conversation as .json
 - [ ] Search across all conversations
 - [ ] Regenerate assistant response (creates sibling branch)
