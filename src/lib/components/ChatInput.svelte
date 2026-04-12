@@ -31,6 +31,7 @@
 
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+			// shift+Enter for changing line
 			event.preventDefault();
 			handleSubmit();
 		}

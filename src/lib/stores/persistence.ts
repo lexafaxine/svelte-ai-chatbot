@@ -48,6 +48,7 @@ export function saveMessages(messages: Message[]): void {
 
 export function loadApiKey(): string | null {
 	if (!isBrowser()) return null;
+	// raw key
 	return localStorage.getItem(API_KEY_KEY);
 }
 

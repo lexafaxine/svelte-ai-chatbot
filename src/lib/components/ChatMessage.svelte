@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Message } from '$lib/types';
-	import { isReasoningModel } from '$lib/config/models';
 	import { renderMarkdown } from '$lib/utils/markdown';
 
 	interface Props {
@@ -13,9 +12,7 @@
 	const isUser = $derived(message.role === 'user');
 	const hasContent = $derived(message.content.length > 0);
 	const hasReasoning = $derived(!!message.reasoning && message.reasoning.length > 0);
-	const modelSupportsReasoning = $derived(isReasoningModel(message.model));
 	const showPending = $derived(!isUser && isStreaming && !hasContent && !hasReasoning);
-	const pendingLabel = $derived(modelSupportsReasoning ? 'Thinking' : 'Generating response');
 	const reasoningOpen = $derived(isStreaming && hasReasoning && !hasContent);
 	const renderedContent = $derived(hasContent ? renderMarkdown(message.content) : '');
 	const renderedReasoning = $derived(hasReasoning ? renderMarkdown(message.reasoning ?? '') : '');
@@ -62,7 +59,7 @@
 						/>
 					</circle>
 				</svg>
-				<span class="text-sm">{pendingLabel}…</span>
+				<span class="text-sm">Pending…</span>
 			</div>
 		{/if}
 

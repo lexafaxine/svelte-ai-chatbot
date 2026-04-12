@@ -16,9 +16,12 @@ function createChatStore() {
 	let conversations = $state<Conversation[]>(browser ? loadConversations() : []);
 	let messages = $state<Message[]>(browser ? loadMessages() : []);
 
-	let streamingMessageId = $state<string | null>(null);
-	let streamError = $state<string | null>(null);
-	let streamAbort: AbortController | null = null;
+	// Per-conversation streaming state so multiple conversations can stream concurrently.
+	// Keys are conversationId; values are the assistant message id / error string.
+	let streamingByConv = $state<Record<string, string>>({});
+	let errorByConv = $state<Record<string, string>>({});
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive, only used imperatively
+	const abortByConv = new Map<string, AbortController>();
 
 	if (browser) {
 		$effect.root(() => {
@@ -93,6 +96,21 @@ function createChatStore() {
 		touchConversation(id, { model });
 	}
 
+	/**
+	 * Append an empty assistant message as a child of `userMessageId`, then
+	 * stream a reply into it from `/api/chat`.
+	 *
+	 * Wire protocol: the server returns NDJSON, one JSON object per line, of
+	 * shape `{type: 'text'|'reasoning', delta}` or `{type: 'error', message}`.
+	 * Text / reasoning deltas are accumulated into the assistant's `content` /
+	 * `reasoning` via `patchMessage`. An `error` frame is surfaced on the
+	 * per-conversation `streamError` slot without throwing.
+	 *
+	 * Abort: callers trigger `stopStreaming(conversationId)` which fires the
+	 * stored AbortController. On abort we overwrite the placeholder with
+	 * STOPPED_MESSAGE *only* when no tokens had arrived — partial outputs are
+	 * left intact so the message remains valid history for the next turn.
+	 */
 	async function streamReply(conversationId: string, userMessageId: string): Promise<void> {
 		const conversation = getConversation(conversationId);
 		if (!conversation) return;
@@ -110,9 +128,15 @@ function createChatStore() {
 			conversation.model
 		);
 
-		streamingMessageId = assistant.id;
-		streamError = null;
-		streamAbort = new AbortController();
+		// If this conversation already has a stream running, abort it first
+		abortByConv.get(conversationId)?.abort();
+
+		const abort = new AbortController();
+		abortByConv.set(conversationId, abort);
+		streamingByConv = { ...streamingByConv, [conversationId]: assistant.id };
+		errorByConv = Object.fromEntries(
+			Object.entries(errorByConv).filter(([k]) => k !== conversationId)
+		);
 
 		let content = '';
 		let reasoning = '';
@@ -123,7 +147,7 @@ function createChatStore() {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ messages: pathUpToUser, model: conversation.model }),
-				signal: streamAbort.signal
+				signal: abort.signal
 			});
 
 			if (!response.ok || !response.body) {
@@ -167,7 +191,7 @@ function createChatStore() {
 			}
 
 			if (serverError) {
-				streamError = serverError;
+				errorByConv = { ...errorByConv, [conversationId]: serverError };
 			}
 		} catch (err) {
 			if (err instanceof Error && err.name === 'AbortError') {
@@ -175,20 +199,29 @@ function createChatStore() {
 					patchMessage(assistant.id, { content: STOPPED_MESSAGE });
 				}
 			} else {
-				streamError = err instanceof Error ? err.message : String(err);
+				const msg = err instanceof Error ? err.message : String(err);
+				errorByConv = { ...errorByConv, [conversationId]: msg };
 			}
 		} finally {
-			streamingMessageId = null;
-			streamAbort = null;
+			streamingByConv = Object.fromEntries(
+				Object.entries(streamingByConv).filter(([k]) => k !== conversationId)
+			);
+			if (abortByConv.get(conversationId) === abort) {
+				abortByConv.delete(conversationId);
+			}
 		}
 	}
 
-	function stopStreaming() {
-		streamAbort?.abort();
+	function stopStreaming(conversationId: string) {
+		abortByConv.get(conversationId)?.abort();
 	}
 
-	function clearStreamError() {
-		streamError = null;
+	function clearStreamError(conversationId: string) {
+		if (conversationId in errorByConv) {
+			errorByConv = Object.fromEntries(
+				Object.entries(errorByConv).filter(([k]) => k !== conversationId)
+			);
+		}
 	}
 
 	return {
@@ -198,11 +231,11 @@ function createChatStore() {
 		get messages() {
 			return messages;
 		},
-		get streamingMessageId() {
-			return streamingMessageId;
+		streamingMessageIdFor(conversationId: string): string | null {
+			return streamingByConv[conversationId] ?? null;
 		},
-		get streamError() {
-			return streamError;
+		streamErrorFor(conversationId: string): string | null {
+			return errorByConv[conversationId] ?? null;
 		},
 		createConversation,
 		deleteConversation,

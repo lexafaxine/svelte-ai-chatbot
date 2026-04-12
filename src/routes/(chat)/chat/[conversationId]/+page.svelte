@@ -8,15 +8,11 @@
 	const conversationId = $derived(page.params.conversationId!);
 	const conversation = $derived(chat.getConversation(conversationId));
 	const activePath = $derived(getActivePath(chat.messages, conversation?.tailId ?? null));
-	const isStreaming = $derived(chat.streamingMessageId !== null);
+	const streamingMsgId = $derived(chat.streamingMessageIdFor(conversationId));
+	const isStreaming = $derived(streamingMsgId !== null);
+	const streamError = $derived(chat.streamErrorFor(conversationId));
 
 	let scrollContainer: HTMLElement;
-
-	$effect(() => {
-		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-		conversationId;
-		chat.clearStreamError();
-	});
 
 	$effect(() => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
@@ -43,14 +39,18 @@
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto">
 		<div class="mx-auto flex w-full max-w-3xl flex-col gap-4 p-6">
 			{#each activePath as message (message.id)}
-				<ChatMessage {message} isStreaming={message.id === chat.streamingMessageId} />
+				<ChatMessage {message} isStreaming={message.id === streamingMsgId} />
 			{/each}
-			{#if chat.streamError}
+			{#if streamError}
 				<div
 					class="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
 				>
-					{chat.streamError}
-					<button type="button" class="ml-2 underline" onclick={() => chat.clearStreamError()}>
+					{streamError}
+					<button
+						type="button"
+						class="ml-2 underline"
+						onclick={() => chat.clearStreamError(conversationId)}
+					>
 						Dismiss
 					</button>
 				</div>
@@ -59,7 +59,11 @@
 	</div>
 	<div class="border-t border-border">
 		<div class="mx-auto w-full max-w-3xl">
-			<ChatInput onSubmit={handleSubmit} {isStreaming} onStop={() => chat.stopStreaming()} />
+			<ChatInput
+				onSubmit={handleSubmit}
+				{isStreaming}
+				onStop={() => chat.stopStreaming(conversationId)}
+			/>
 		</div>
 	</div>
 </div>

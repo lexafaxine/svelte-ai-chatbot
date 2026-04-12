@@ -1,7 +1,6 @@
 import { streamText, type ModelMessage } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { env } from '$env/dynamic/private';
-import { isReasoningModel } from '$lib/config/models';
 import type { RequestHandler } from './$types';
 
 interface ChatRequestBody {
@@ -9,6 +8,22 @@ interface ChatRequestBody {
 	model: string;
 }
 
+/**
+ * POST /api/chat — proxy a chat completion through OpenRouter and stream
+ * the result back to the browser as NDJSON.
+ *
+ * Body: `{ messages: ModelMessage[]; model: string }` — `messages` is the
+ * already-resolved active path from the message tree.
+ *
+ * Auth (BYOK): the OpenRouter key is read from the `x-openrouter-key`
+ * header first, with `OPENROUTER_API_KEY` as a server-side fallback for dev.
+ *
+ * Response: `application/x-ndjson`. One JSON object per line, each being
+ * `{type: 'text', delta}`, `{type: 'reasoning', delta}`, or
+ * `{type: 'error', message}`. We consume `result.fullStream` ourselves
+ * rather than using `toTextStreamResponse()` so that provider-level errors
+ * reach the client instead of being silently swallowed as an empty stream.
+ */
 export const POST: RequestHandler = async ({ request }) => {
 	const apiKey = request.headers.get('x-openrouter-key') ?? env.OPENROUTER_API_KEY;
 	if (!apiKey) {
@@ -27,12 +42,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	const openrouter = createOpenRouter({ apiKey });
-	const languageModel = isReasoningModel(body.model)
-		? openrouter(body.model, { reasoning: { effort: 'medium' } })
-		: openrouter(body.model);
-
 	const result = streamText({
-		model: languageModel,
+		model: openrouter(body.model),
 		messages: body.messages
 	});
 

@@ -2,10 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ChatMessage from './ChatMessage.svelte';
 import type { Message } from '$lib/types';
-import { MODELS } from '$lib/config/models';
-
-const REASONING_MODEL = MODELS.find((m) => m.supportsReasoning)!.id;
-const PLAIN_MODEL = MODELS.find((m) => !m.supportsReasoning)!.id;
+import { DEFAULT_MODEL } from '$lib/config/models';
 
 function makeMessage(overrides: Partial<Message> = {}): Message {
 	return {
@@ -14,7 +11,7 @@ function makeMessage(overrides: Partial<Message> = {}): Message {
 		parentId: null,
 		role: 'assistant',
 		content: '',
-		model: PLAIN_MODEL,
+		model: DEFAULT_MODEL,
 		createdAt: 0,
 		...overrides
 	};
@@ -33,22 +30,13 @@ describe('ChatMessage — user role', () => {
 });
 
 describe('ChatMessage — assistant pending indicator', () => {
-	it('shows "Thinking…" label for reasoning-capable models with no content yet', async () => {
+	it('shows "Pending…" label when streaming with no content yet', async () => {
 		const screen = render(ChatMessage, {
-			message: makeMessage({ model: REASONING_MODEL, content: '' }),
+			message: makeMessage({ content: '' }),
 			isStreaming: true
 		});
 
-		await expect.element(screen.getByText(/Thinking…/)).toBeVisible();
-	});
-
-	it('shows "Generating response…" label for plain models with no content yet', async () => {
-		const screen = render(ChatMessage, {
-			message: makeMessage({ model: PLAIN_MODEL, content: '' }),
-			isStreaming: true
-		});
-
-		await expect.element(screen.getByText(/Generating response…/)).toBeVisible();
+		await expect.element(screen.getByText(/Pending…/)).toBeVisible();
 	});
 
 	it('does not show the pending indicator when content exists', async () => {
@@ -57,8 +45,7 @@ describe('ChatMessage — assistant pending indicator', () => {
 			isStreaming: true
 		});
 
-		expect(screen.container.textContent).not.toMatch(/Generating response…/);
-		expect(screen.container.textContent).not.toMatch(/Thinking…/);
+		expect(screen.container.textContent).not.toMatch(/Pending…/);
 	});
 
 	it('does not show the pending indicator when not streaming', async () => {
@@ -67,7 +54,7 @@ describe('ChatMessage — assistant pending indicator', () => {
 			isStreaming: false
 		});
 
-		expect(screen.container.textContent).not.toMatch(/Generating response…/);
+		expect(screen.container.textContent).not.toMatch(/Pending…/);
 	});
 });
 
