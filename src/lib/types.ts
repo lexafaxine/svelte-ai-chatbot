@@ -16,6 +16,7 @@ export interface Conversation {
 	title: string;
 	model: string;
 	tailId: string | null;
+	activeChildMap: Record<string, string>;
 	createdAt: number;
 	updatedAt: number;
 }

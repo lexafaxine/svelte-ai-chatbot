@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getActivePath, getSiblings } from './message-tree';
+import { getActivePath, getSiblings, getLeafDescendant } from './message-tree';
 import type { Message } from '$lib/types';
 
 function msg(overrides: Partial<Message> & { id: string }): Message {
@@ -79,5 +79,57 @@ describe('getSiblings', () => {
 	it('returns a single-element array when the message has no siblings', () => {
 		const only = msg({ id: 'only', parentId: 'p' });
 		expect(getSiblings([only], 'only').map((m) => m.id)).toEqual(['only']);
+	});
+});
+
+describe('getLeafDescendant', () => {
+	it('returns startId when it has no children', () => {
+		const a = msg({ id: 'a' });
+		const map: Record<string, string> = {};
+		expect(getLeafDescendant([a], 'a', map)).toBe('a');
+	});
+
+	it('follows activeChildMap down to the leaf', () => {
+		const a = msg({ id: 'a' });
+		const b = msg({ id: 'b', parentId: 'a', createdAt: 1 });
+		const c = msg({ id: 'c', parentId: 'b', createdAt: 2 });
+		const map: Record<string, string> = { a: 'b', b: 'c' };
+
+		expect(getLeafDescendant([a, b, c], 'a', map)).toBe('c');
+	});
+
+	it('picks the latest child and records it when map has no entry', () => {
+		const a = msg({ id: 'a' });
+		const b1 = msg({ id: 'b1', parentId: 'a', createdAt: 1 });
+		const b2 = msg({ id: 'b2', parentId: 'a', createdAt: 5 });
+		const map: Record<string, string> = {};
+
+		expect(getLeafDescendant([a, b1, b2], 'a', map)).toBe('b2');
+		expect(map['a']).toBe('b2');
+	});
+
+	it('falls back to latest child when mapped child no longer exists', () => {
+		const a = msg({ id: 'a' });
+		const b = msg({ id: 'b', parentId: 'a', createdAt: 1 });
+		const map: Record<string, string> = { a: 'deleted' };
+
+		expect(getLeafDescendant([a, b], 'a', map)).toBe('b');
+		expect(map['a']).toBe('b');
+	});
+
+	it('walks through a branched tree respecting the map at each level', () => {
+		//   a
+		//  / \
+		// b1  b2
+		//     |
+		//    c1
+		const a = msg({ id: 'a' });
+		const b1 = msg({ id: 'b1', parentId: 'a', createdAt: 1 });
+		const b2 = msg({ id: 'b2', parentId: 'a', createdAt: 2 });
+		const c1 = msg({ id: 'c1', parentId: 'b2', createdAt: 3 });
+		const map: Record<string, string> = { a: 'b2' };
+
+		expect(getLeafDescendant([a, b1, b2, c1], 'a', map)).toBe('c1');
+		expect(map['b2']).toBe('c1');
 	});
 });

@@ -29,6 +29,7 @@ function conv(overrides: Partial<Conversation> & { id: string }): Conversation {
 		title: 'Untitled',
 		model: 'm',
 		tailId: null,
+		activeChildMap: {},
 		createdAt: 0,
 		updatedAt: 0,
 		...overrides

@@ -42,7 +42,7 @@ describe('conversations persistence', () => {
 	it('round-trips conversation list', async () => {
 		const { loadConversations, saveConversations } = await importPersistence();
 		const convs: Conversation[] = [
-			{ id: 'c1', title: 'First', model: 'm', tailId: null, createdAt: 1, updatedAt: 2 }
+			{ id: 'c1', title: 'First', model: 'm', tailId: null, activeChildMap: {}, createdAt: 1, updatedAt: 2 }
 		];
 		saveConversations(convs);
 		expect(loadConversations()).toEqual(convs);
