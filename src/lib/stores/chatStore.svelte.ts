@@ -5,6 +5,13 @@ import { DEFAULT_MODEL } from '$lib/config/models';
 import { getActivePath } from '$lib/utils/message-tree';
 import { loadConversations, saveConversations, loadMessages, saveMessages } from './persistence';
 
+type StreamEvent =
+	| { type: 'text'; delta: string }
+	| { type: 'reasoning'; delta: string }
+	| { type: 'error'; message: string };
+
+const STOPPED_MESSAGE = 'You stopped the response';
+
 function createChatStore() {
 	let conversations = $state<Conversation[]>(browser ? loadConversations() : []);
 	let messages = $state<Message[]>(browser ? loadMessages() : []);
@@ -70,8 +77,8 @@ function createChatStore() {
 		return message;
 	}
 
-	function updateMessageContent(id: string, content: string) {
-		messages = messages.map((m) => (m.id === id ? { ...m, content } : m));
+	function patchMessage(id: string, patch: Partial<Message>) {
+		messages = messages.map((m) => (m.id === id ? { ...m, ...patch } : m));
 	}
 
 	function setTail(conversationId: string, tailId: string | null) {
@@ -107,6 +114,10 @@ function createChatStore() {
 		streamError = null;
 		streamAbort = new AbortController();
 
+		let content = '';
+		let reasoning = '';
+		let serverError: string | null = null;
+
 		try {
 			const response = await fetch('/api/chat', {
 				method: 'POST',
@@ -122,17 +133,47 @@ function createChatStore() {
 
 			const reader = response.body.getReader();
 			const decoder = new TextDecoder();
-			let content = '';
+			let buffer = '';
 
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
-				content += decoder.decode(value, { stream: true });
-				updateMessageContent(assistant.id, content);
+				buffer += decoder.decode(value, { stream: true });
+
+				let newlineIndex = buffer.indexOf('\n');
+				while (newlineIndex !== -1) {
+					const line = buffer.slice(0, newlineIndex).trim();
+					buffer = buffer.slice(newlineIndex + 1);
+					newlineIndex = buffer.indexOf('\n');
+					if (!line) continue;
+
+					let event: StreamEvent;
+					try {
+						event = JSON.parse(line) as StreamEvent;
+					} catch {
+						continue;
+					}
+
+					if (event.type === 'text') {
+						content += event.delta;
+						patchMessage(assistant.id, { content });
+					} else if (event.type === 'reasoning') {
+						reasoning += event.delta;
+						patchMessage(assistant.id, { reasoning });
+					} else if (event.type === 'error') {
+						serverError = event.message;
+					}
+				}
+			}
+
+			if (serverError) {
+				streamError = serverError;
 			}
 		} catch (err) {
 			if (err instanceof Error && err.name === 'AbortError') {
-				// user cancelled — keep whatever partial content was already written
+				if (!content && !reasoning) {
+					patchMessage(assistant.id, { content: STOPPED_MESSAGE });
+				}
 			} else {
 				streamError = err instanceof Error ? err.message : String(err);
 			}
@@ -167,7 +208,7 @@ function createChatStore() {
 		deleteConversation,
 		getConversation,
 		appendMessage,
-		updateMessageContent,
+		patchMessage,
 		setTail,
 		setConversationTitle,
 		setConversationModel,

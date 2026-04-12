@@ -1,13 +1,21 @@
 export interface ModelOption {
 	id: string;
 	label: string;
+	supportsReasoning?: boolean;
 }
 
 export const MODELS: ModelOption[] = [
-	{ id: 'deepseek/deepseek-chat-v3.1:free', label: 'DeepSeek V3.1 (free)' },
-	{ id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B (free)' },
-	{ id: 'google/gemini-2.0-flash-exp:free', label: 'Gemini 2.0 Flash (free)' },
-	{ id: 'qwen/qwen-2.5-72b-instruct:free', label: 'Qwen 2.5 72B (free)' }
+	{
+		id: 'deepseek/deepseek-r1-distill-llama-70b',
+		label: 'DeepSeek R1 Distill Llama 70B',
+		supportsReasoning: true
+	},
+	{ id: 'google/gemma-4-31b-it:free', label: 'Gemma 4 31B (free)' },
+	{ id: 'minimax/minimax-m2.5:free', label: 'MiniMax M2.5 (free)' }
 ];
 
-export const DEFAULT_MODEL = MODELS[0].id;
+export const DEFAULT_MODEL = MODELS[2].id;
+
+export function isReasoningModel(modelId: string): boolean {
+	return MODELS.find((m) => m.id === modelId)?.supportsReasoning === true;
+}

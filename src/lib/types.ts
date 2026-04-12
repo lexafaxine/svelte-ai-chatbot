@@ -8,6 +8,7 @@ export interface Message {
 	content: string;
 	model: string;
 	createdAt: number;
+	reasoning?: string;
 }
 
 export interface Conversation {
