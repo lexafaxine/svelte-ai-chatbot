@@ -65,7 +65,10 @@
 	}
 
 	function handleNodeClick(node: TreeNode) {
-		if (!isLeaf(node)) return;
+		if (!isLeaf(node)) {
+			toggleCollapse(node.message.id);
+			return;
+		}
 		const map = { ...conversation.activeChildMap };
 		const leafId = getLeafDescendant(messages, node.message.id, map);
 		onSelectPath(leafId);
@@ -121,13 +124,12 @@
 					{/if}
 					<button
 						type="button"
-						class="flex min-w-0 items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-sm {isActiveLeaf
+						class="flex min-w-0 items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-sm cursor-pointer hover:bg-muted {isActiveLeaf
 							? 'bg-primary/15 font-medium text-primary'
 							: isActive
 								? 'bg-muted/60 text-foreground'
-								: 'text-muted-foreground'} {leaf ? 'cursor-pointer hover:bg-muted' : 'cursor-default'}"
+								: 'text-muted-foreground'}"
 						onclick={() => handleNodeClick(node)}
-						disabled={!leaf}
 					>
 						<span
 							class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold {node
