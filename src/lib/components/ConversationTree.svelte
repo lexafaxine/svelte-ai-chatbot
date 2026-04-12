@@ -121,7 +121,7 @@
 </Tooltip.Root>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="max-h-[80vh] sm:max-w-2xl overflow-hidden">
+	<Dialog.Content class="max-h-[80vh] overflow-hidden sm:max-w-2xl">
 		<Dialog.Header>
 			<Dialog.Title>Conversation Tree</Dialog.Title>
 			<Dialog.Description>
