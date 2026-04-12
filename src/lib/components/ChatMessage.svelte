@@ -1,13 +1,30 @@
 <script lang="ts">
 	import type { Message } from '$lib/types';
 	import { renderMarkdown } from '$lib/utils/markdown';
+	import { Button } from '$lib/components/ui/button';
+	import { Textarea } from '$lib/components/ui/textarea';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 
 	interface Props {
 		message: Message;
 		isStreaming?: boolean;
+		siblings?: Message[];
+		onSwitchSibling?: (targetId: string) => void;
+		onEdit?: (messageId: string, newContent: string) => void;
+		onRegenerate?: (messageId: string) => void;
 	}
 
-	let { message, isStreaming = false }: Props = $props();
+	let {
+		message,
+		isStreaming = false,
+		siblings = [],
+		onSwitchSibling,
+		onEdit,
+		onRegenerate
+	}: Props = $props();
 
 	const isUser = $derived(message.role === 'user');
 	const hasContent = $derived(message.content.length > 0);
@@ -16,18 +33,87 @@
 	const reasoningOpen = $derived(isStreaming && hasReasoning && !hasContent);
 	const renderedContent = $derived(hasContent ? renderMarkdown(message.content) : '');
 	const renderedReasoning = $derived(hasReasoning ? renderMarkdown(message.reasoning ?? '') : '');
+
+	const hasSiblings = $derived(siblings.length > 1);
+	const siblingIndex = $derived(siblings.findIndex((s) => s.id === message.id));
+
+	let editing = $state(false);
+	let editValue = $state('');
+
+	function startEdit() {
+		editValue = message.content;
+		editing = true;
+	}
+
+	function submitEdit() {
+		const trimmed = editValue.trim();
+		if (trimmed && trimmed !== message.content) {
+			onEdit?.(message.id, trimmed);
+		}
+		editing = false;
+	}
+
+	function cancelEdit() {
+		editing = false;
+	}
 </script>
 
 {#if isUser}
-	<div class="flex w-full justify-end">
-		<div
-			class="max-w-[80%] rounded-2xl bg-primary px-4 py-2 whitespace-pre-wrap text-primary-foreground"
-		>
-			{message.content}
-		</div>
+	<div class="group flex w-full flex-col items-end">
+		{#if editing}
+			<div class="flex w-full max-w-[80%] flex-col gap-2">
+				<Textarea bind:value={editValue} rows={3} class="resize-none" />
+				<div class="flex justify-end gap-2">
+					<Button variant="outline" size="sm" onclick={cancelEdit}>Cancel</Button>
+					<Button size="sm" onclick={submitEdit}>Submit</Button>
+				</div>
+			</div>
+		{:else}
+			<div class="flex items-start gap-1">
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+					onclick={startEdit}
+					aria-label="Edit message"
+				>
+					<PencilIcon class="h-3.5 w-3.5" />
+				</Button>
+				<div
+					class="max-w-[80%] rounded-2xl bg-primary px-4 py-2 whitespace-pre-wrap text-primary-foreground"
+				>
+					{message.content}
+				</div>
+			</div>
+		{/if}
+		{#if hasSiblings && !editing}
+			<div class="mt-1 flex w-full items-center justify-end gap-1 text-xs text-muted-foreground">
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-5 w-5"
+					disabled={siblingIndex <= 0}
+					onclick={() => onSwitchSibling?.(siblings[siblingIndex - 1].id)}
+					aria-label="Previous version"
+				>
+					<ChevronLeftIcon class="h-3 w-3" />
+				</Button>
+				<span>{siblingIndex + 1} / {siblings.length}</span>
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-5 w-5"
+					disabled={siblingIndex >= siblings.length - 1}
+					onclick={() => onSwitchSibling?.(siblings[siblingIndex + 1].id)}
+					aria-label="Next version"
+				>
+					<ChevronRightIcon class="h-3 w-3" />
+				</Button>
+			</div>
+		{/if}
 	</div>
 {:else}
-	<div class="flex w-full flex-col items-start gap-2">
+	<div class="group flex w-full flex-col items-start gap-2">
 		{#if showPending}
 			<div class="flex items-center gap-2 px-2 text-muted-foreground" aria-live="polite">
 				<svg class="h-3 w-8" viewBox="0 0 40 10" aria-hidden="true">
@@ -90,6 +176,46 @@
 				{#if isStreaming}
 					<span class="animate-pulse">▍</span>
 				{/if}
+			</div>
+		{/if}
+
+		{#if !isStreaming && hasContent}
+			<div class="flex items-center gap-1">
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+					onclick={() => onRegenerate?.(message.id)}
+					aria-label="Regenerate response"
+				>
+					<RefreshCwIcon class="h-3.5 w-3.5" />
+				</Button>
+			</div>
+		{/if}
+
+		{#if hasSiblings}
+			<div class="flex items-center gap-1 text-xs text-muted-foreground">
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-5 w-5"
+					disabled={siblingIndex <= 0}
+					onclick={() => onSwitchSibling?.(siblings[siblingIndex - 1].id)}
+					aria-label="Previous version"
+				>
+					<ChevronLeftIcon class="h-3 w-3" />
+				</Button>
+				<span>{siblingIndex + 1} / {siblings.length}</span>
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-5 w-5"
+					disabled={siblingIndex >= siblings.length - 1}
+					onclick={() => onSwitchSibling?.(siblings[siblingIndex + 1].id)}
+					aria-label="Next version"
+				>
+					<ChevronRightIcon class="h-3 w-3" />
+				</Button>
 			</div>
 		{/if}
 	</div>

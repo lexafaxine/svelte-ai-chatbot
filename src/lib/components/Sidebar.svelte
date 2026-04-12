@@ -104,12 +104,7 @@
 		</Dialog.Header>
 		<div class="flex flex-col gap-3 py-2">
 			<label for="api-key-input" class="text-sm font-medium">OpenRouter API Key</label>
-			<Input
-				id="api-key-input"
-				type="password"
-				placeholder="sk-or-..."
-				bind:value={apiKeyInput}
-			/>
+			<Input id="api-key-input" type="password" placeholder="sk-or-..." bind:value={apiKeyInput} />
 		</div>
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (settingsOpen = false)}>Cancel</Button>

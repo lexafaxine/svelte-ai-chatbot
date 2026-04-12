@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import { browser } from '$app/environment';
 import type { Conversation, Message, Role } from '$lib/types';
 import { DEFAULT_MODEL } from '$lib/config/models';
-import { getActivePath } from '$lib/utils/message-tree';
+import { getActivePath, getLeafDescendant } from '$lib/utils/message-tree';
 import {
 	loadConversations,
 	saveConversations,
@@ -49,6 +49,7 @@ function createChatStore() {
 			title: 'New chat',
 			model,
 			tailId: null,
+			activeChildMap: {},
 			createdAt: now,
 			updatedAt: now
 		};
@@ -63,6 +64,14 @@ function createChatStore() {
 
 	function getConversation(id: string): Conversation | null {
 		return conversations.find((c) => c.id === id) ?? null;
+	}
+
+	function updateActiveChild(conversationId: string, parentId: string | null, childId: string) {
+		const conv = getConversation(conversationId);
+		if (!conv) return;
+		const key = parentId ?? 'root';
+		const map = { ...conv.activeChildMap, [key]: childId };
+		touchConversation(conversationId, { activeChildMap: map });
 	}
 
 	function appendMessage(
@@ -82,6 +91,7 @@ function createChatStore() {
 			createdAt: Date.now()
 		};
 		messages = [...messages, message];
+		updateActiveChild(conversationId, parentId, message.id);
 		touchConversation(conversationId, { tailId: message.id });
 		return message;
 	}
@@ -100,6 +110,41 @@ function createChatStore() {
 
 	function setConversationModel(id: string, model: string) {
 		touchConversation(id, { model });
+	}
+
+	function switchSibling(conversationId: string, targetMessageId: string) {
+		const target = messages.find((m) => m.id === targetMessageId);
+		if (!target) return;
+
+		const conv = getConversation(conversationId);
+		if (!conv) return;
+
+		const map = { ...conv.activeChildMap, [target.parentId ?? 'root']: targetMessageId };
+		const leafId = getLeafDescendant(messages, targetMessageId, map);
+		touchConversation(conversationId, { activeChildMap: map, tailId: leafId });
+	}
+
+	function regenerate(conversationId: string, assistantMessageId: string) {
+		const assistant = messages.find((m) => m.id === assistantMessageId);
+		if (!assistant || assistant.role !== 'assistant' || !assistant.parentId) return;
+		streamReply(conversationId, assistant.parentId);
+	}
+
+	function editAndResubmit(conversationId: string, oldUserMsgId: string, newContent: string) {
+		const oldMsg = messages.find((m) => m.id === oldUserMsgId);
+		if (!oldMsg || oldMsg.role !== 'user') return;
+
+		const conv = getConversation(conversationId);
+		if (!conv) return;
+
+		const newUserMsg = appendMessage(
+			conversationId,
+			'user',
+			newContent,
+			oldMsg.parentId,
+			conv.model
+		);
+		streamReply(conversationId, newUserMsg.id);
 	}
 
 	/**
@@ -255,6 +300,9 @@ function createChatStore() {
 		setTail,
 		setConversationTitle,
 		setConversationModel,
+		switchSibling,
+		regenerate,
+		editAndResubmit,
 		streamReply,
 		stopStreaming,
 		clearStreamError
