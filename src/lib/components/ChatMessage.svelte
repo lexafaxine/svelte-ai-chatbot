@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Message } from '$lib/types';
 	import { isReasoningModel } from '$lib/config/models';
+	import { renderMarkdown } from '$lib/utils/markdown';
 
 	interface Props {
 		message: Message;
@@ -16,6 +17,8 @@
 	const showPending = $derived(!isUser && isStreaming && !hasContent && !hasReasoning);
 	const pendingLabel = $derived(modelSupportsReasoning ? 'Thinking' : 'Generating response');
 	const reasoningOpen = $derived(isStreaming && hasReasoning && !hasContent);
+	const renderedContent = $derived(hasContent ? renderMarkdown(message.content) : '');
+	const renderedReasoning = $derived(hasReasoning ? renderMarkdown(message.reasoning ?? '') : '');
 </script>
 
 {#if isUser}
@@ -69,18 +72,18 @@
 					{isStreaming && !hasContent ? 'Thinking…' : 'Thoughts'}
 				</summary>
 				<div
-					class="text-muted-foreground border-muted mt-2 border-l-2 pl-3 text-sm whitespace-pre-wrap"
+					class="text-muted-foreground border-muted prose prose-sm mt-2 max-w-none border-l-2 pl-3 text-sm"
 				>
-					{message.reasoning}
+					{@html renderedReasoning}
 				</div>
 			</details>
 		{/if}
 
 		{#if hasContent}
-			<div
-				class="bg-muted text-foreground max-w-[80%] rounded-2xl px-4 py-2 whitespace-pre-wrap"
-			>
-				{message.content}
+			<div class="bg-muted text-foreground max-w-[80%] rounded-2xl px-4 py-2">
+				<div class="prose prose-sm max-w-none">
+					{@html renderedContent}
+				</div>
 				{#if isStreaming}
 					<span class="animate-pulse">▍</span>
 				{/if}

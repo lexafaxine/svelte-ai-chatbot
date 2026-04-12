@@ -14,7 +14,7 @@ export const MODELS: ModelOption[] = [
 	{ id: 'minimax/minimax-m2.5:free', label: 'MiniMax M2.5 (free)' }
 ];
 
-export const DEFAULT_MODEL = MODELS[2].id;
+export const DEFAULT_MODEL = MODELS[0].id;
 
 export function isReasoningModel(modelId: string): boolean {
 	return MODELS.find((m) => m.id === modelId)?.supportsReasoning === true;
