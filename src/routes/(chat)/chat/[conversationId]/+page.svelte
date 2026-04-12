@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import ChatInput from '$lib/components/ChatInput.svelte';
 	import ChatMessage from '$lib/components/ChatMessage.svelte';
+	import ConversationTree from '$lib/components/ConversationTree.svelte';
 	import { chat } from '$lib/stores/chatStore.svelte';
 	import { getActivePath, getSiblings } from '$lib/utils/message-tree';
 
@@ -14,10 +15,8 @@
 
 	let scrollContainer: HTMLElement;
 
-	// Only auto-scroll when:
-	// 1. The active path genuinely changed (new message or branch switch)
-	// 2. We're streaming in THIS conversation and user is near the bottom
 	let prevPathFingerprint = '';
+	let suppressNextScroll = false;
 
 	$effect(() => {
 		const fingerprint = `${activePath.length}:${conversation?.tailId ?? ''}`;
@@ -27,7 +26,10 @@
 
 		if (fingerprint !== prevPathFingerprint) {
 			prevPathFingerprint = fingerprint;
-			scrollContainer.scrollTop = scrollContainer.scrollHeight;
+			if (!suppressNextScroll) {
+				scrollContainer.scrollTop = scrollContainer.scrollHeight;
+			}
+			suppressNextScroll = false;
 			return;
 		}
 
@@ -61,11 +63,22 @@
 	}
 
 	function handleSwitchSibling(targetId: string) {
+		suppressNextScroll = true;
 		chat.switchSibling(conversationId, targetId);
+	}
+
+	function handleSelectPath(tailId: string) {
+		suppressNextScroll = true;
+		chat.setTail(conversationId, tailId);
 	}
 </script>
 
 <div class="flex flex-1 flex-col overflow-hidden">
+	{#if conversation}
+		<div class="flex items-center justify-end border-b border-border px-4 py-1">
+			<ConversationTree {conversation} messages={chat.messages} onSelectPath={handleSelectPath} />
+		</div>
+	{/if}
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto">
 		<div class="mx-auto flex w-full max-w-3xl flex-col gap-4 p-6">
 			{#each activePath as message (message.id)}
