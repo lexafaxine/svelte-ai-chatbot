@@ -3,6 +3,7 @@
 	import ChatInput from '$lib/components/ChatInput.svelte';
 	import ChatMessage from '$lib/components/ChatMessage.svelte';
 	import ConversationTree from '$lib/components/ConversationTree.svelte';
+	import ModelSwitcher from '$lib/components/ModelSwitcher.svelte';
 	import { chat } from '$lib/stores/chatStore.svelte';
 	import { getActivePath, getSiblings } from '$lib/utils/message-tree';
 
@@ -75,7 +76,11 @@
 
 <div class="flex flex-1 flex-col overflow-hidden">
 	{#if conversation}
-		<div class="flex items-center justify-end border-b border-border px-4 py-1">
+		<div class="flex items-center justify-between px-4 py-1">
+			<ModelSwitcher
+				model={conversation.model}
+				onModelChange={(model) => chat.setConversationModel(conversation.id, model)}
+			/>
 			<ConversationTree {conversation} messages={chat.messages} onSelectPath={handleSelectPath} />
 		</div>
 	{/if}

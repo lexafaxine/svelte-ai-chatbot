@@ -80,12 +80,12 @@
 	<Tooltip.Trigger>
 		<Button
 			variant="ghost"
-			size="icon"
-			class="h-8 w-8"
+			class="h-8 gap-1.5 px-2"
 			onclick={() => (open = true)}
 			aria-label="Show conversation tree"
 		>
-			<GitBranchIcon class="h-4 w-4" />
+			<GitBranchIcon class="h-5 w-5" />
+			<span class="text-sm">Tree</span>
 		</Button>
 	</Tooltip.Trigger>
 	<Tooltip.Content>
@@ -94,7 +94,7 @@
 </Tooltip.Root>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="max-h-[80vh] max-w-2xl overflow-hidden">
+	<Dialog.Content class="max-h-[80vh] max-w-4xl overflow-hidden">
 		<Dialog.Header>
 			<Dialog.Title>Conversation Tree</Dialog.Title>
 			<Dialog.Description>
@@ -106,7 +106,7 @@
 				{@const isActive = activePathIds.has(node.message.id)}
 				{@const leaf = isLeaf(node)}
 				{@const isActiveLeaf = isActive && leaf && node.message.id === conversation.tailId}
-				{@const isCollapsed = collapsed.get(node.message.id) ?? false}
+				{@const isCollapsed = collapsed.get(node.message.id) ?? depth > 8}
 				<div class="flex items-start gap-1" style="padding-left: {depth * 20}px">
 					{#if !leaf}
 						<button
