@@ -2,8 +2,10 @@
 	import { page } from '$app/state';
 	import ChatInput from '$lib/components/ChatInput.svelte';
 	import ChatMessage from '$lib/components/ChatMessage.svelte';
-	import ConversationTree from '$lib/components/ConversationTree.svelte';
 	import ModelSwitcher from '$lib/components/ModelSwitcher.svelte';
+	import { Button } from '$lib/components/ui/button';
+	import DownloadIcon from '@lucide/svelte/icons/download';
+	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
 	import { chat } from '$lib/stores/chatStore.svelte';
 	import { getActivePath, getSiblings } from '$lib/utils/message-tree';
 
@@ -67,11 +69,6 @@
 		suppressNextScroll = true;
 		chat.switchSibling(conversationId, targetId);
 	}
-
-	function handleSelectPath(tailId: string) {
-		suppressNextScroll = true;
-		chat.setTail(conversationId, tailId);
-	}
 </script>
 
 <div class="flex flex-1 flex-col overflow-hidden">
@@ -81,7 +78,20 @@
 				model={conversation.model}
 				onModelChange={(model) => chat.setConversationModel(conversation.id, model)}
 			/>
-			<ConversationTree {conversation} messages={chat.messages} onSelectPath={handleSelectPath} />
+			<div class="flex items-center gap-1">
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-8 w-8"
+					disabled
+					aria-label="Export conversation"
+				>
+					<DownloadIcon class="h-4 w-4" />
+				</Button>
+				<Button variant="ghost" size="icon" class="h-8 w-8" disabled aria-label="More actions">
+					<MoreHorizontalIcon class="h-4 w-4" />
+				</Button>
+			</div>
 		</div>
 	{/if}
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto">
