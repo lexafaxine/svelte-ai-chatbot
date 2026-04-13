@@ -55,9 +55,9 @@ function createChatStore() {
 		});
 	}
 
-	function touchConversation(id: string, patch: Partial<Conversation> = {}) {
+	function touchConversation(id: string, patch: Partial<Conversation> = {}, updateTime = true) {
 		conversations = conversations.map((c) =>
-			c.id === id ? { ...c, ...patch, updatedAt: Date.now() } : c
+			c.id === id ? { ...c, ...patch, ...(updateTime ? { updatedAt: Date.now() } : {}) } : c
 		);
 	}
 
@@ -131,7 +131,7 @@ function createChatStore() {
 	}
 
 	function setConversationTitle(id: string, title: string) {
-		touchConversation(id, { title, autoTitlePending: false });
+		touchConversation(id, { title, autoTitlePending: false }, false);
 	}
 
 	function setConversationModel(id: string, model: string) {
