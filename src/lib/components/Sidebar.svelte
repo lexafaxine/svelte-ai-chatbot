@@ -12,6 +12,7 @@
 	import { chat } from '$lib/stores/chatStore.svelte';
 	import { theme } from '$lib/stores/theme.svelte';
 	import { loadApiKey, saveApiKey } from '$lib/stores/persistence';
+	import { fade } from 'svelte/transition';
 	import ConversationMenu from './ConversationMenu.svelte';
 
 	interface Props {
@@ -64,7 +65,13 @@
 							class="h-auto w-full justify-start py-2 pr-9 text-left"
 						>
 							<MessageSquareIcon />
-							<span class="flex-1 truncate">{conversation.title}</span>
+							<span class="flex-1 truncate">
+								{#key conversation.title}
+									<span class="block truncate" in:fade={{ duration: 200 }}>
+										{conversation.title}
+									</span>
+								{/key}
+							</span>
 						</Button>
 						<ConversationMenu
 							{conversation}

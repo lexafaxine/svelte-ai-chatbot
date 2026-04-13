@@ -39,7 +39,7 @@
 	<DropdownMenu.Content {align} class="w-40">
 		<DropdownMenu.Item
 			variant="destructive"
-			class="data-[variant=destructive]:text-destructive-soft data-[variant=destructive]:focus:text-destructive-soft data-[variant=destructive]:*:[svg]:text-destructive-soft data-[variant=destructive]:focus:bg-destructive-soft/10 dark:data-[variant=destructive]:focus:bg-destructive-soft/20 text-destructive-soft focus:text-destructive-soft"
+			class="text-destructive-soft focus:text-destructive-soft data-[variant=destructive]:text-destructive-soft data-[variant=destructive]:focus:bg-destructive-soft/10 data-[variant=destructive]:focus:text-destructive-soft dark:data-[variant=destructive]:focus:bg-destructive-soft/20 data-[variant=destructive]:*:[svg]:text-destructive-soft"
 			onclick={() => (deleteOpen = true)}
 		>
 			<Trash2Icon />
