@@ -4,7 +4,10 @@ import { render } from 'vitest-browser-svelte';
 const gotoMock = vi.fn();
 const resolveMock = vi.fn((path) => path);
 const pageMock = vi.hoisted(() => ({ params: {} as Record<string, string | undefined> }));
-const chatMock = vi.hoisted(() => ({ deleteConversation: vi.fn() }));
+const chatMock = vi.hoisted(() => ({
+	deleteConversation: vi.fn(),
+	setConversationTitle: vi.fn()
+}));
 
 vi.mock('$app/navigation', () => ({
 	goto: gotoMock
@@ -33,6 +36,7 @@ beforeEach(() => {
 	gotoMock.mockReset();
 	resolveMock.mockClear();
 	chatMock.deleteConversation.mockReset();
+	chatMock.setConversationTitle.mockReset();
 	pageMock.params = {};
 });
 
@@ -98,5 +102,69 @@ describe('ConversationMenu', () => {
 		// Verify outcomes
 		expect(chatMock.deleteConversation).toHaveBeenCalledWith('conv-123');
 		expect(gotoMock).not.toHaveBeenCalled();
+	});
+
+	it('opens the rename dialog pre-filled with the current title', async () => {
+		const screen = render(ConversationMenu, { conversation: mockConversation });
+
+		await screen.getByRole('button', { name: 'Conversation actions' }).click();
+		await screen.getByRole('menuitem', { name: /Rename/i }).click();
+
+		await expect.element(screen.getByRole('dialog')).toBeVisible();
+		await expect.element(screen.getByText('Rename conversation')).toBeVisible();
+		await expect.element(screen.getByRole('textbox')).toHaveValue('Test Conversation');
+	});
+
+	it('saves a new title via setConversationTitle and closes the dialog', async () => {
+		const screen = render(ConversationMenu, { conversation: mockConversation });
+
+		await screen.getByRole('button', { name: 'Conversation actions' }).click();
+		await screen.getByRole('menuitem', { name: /Rename/i }).click();
+
+		const input = screen.getByRole('textbox');
+		await input.fill('  Renamed chat  ');
+		await screen.getByRole('button', { name: 'Save', exact: true }).click();
+
+		expect(chatMock.setConversationTitle).toHaveBeenCalledExactlyOnceWith(
+			'conv-123',
+			'Renamed chat'
+		);
+	});
+
+	it('disables Save when the input is empty or unchanged', async () => {
+		const screen = render(ConversationMenu, { conversation: mockConversation });
+
+		await screen.getByRole('button', { name: 'Conversation actions' }).click();
+		await screen.getByRole('menuitem', { name: /Rename/i }).click();
+
+		const save = screen.getByRole('button', { name: 'Save', exact: true });
+		const input = screen.getByRole('textbox');
+
+		// Pre-filled with current title → unchanged → disabled
+		await expect.element(save).toBeDisabled();
+
+		// Empty → still disabled
+		await input.fill('');
+		await expect.element(save).toBeDisabled();
+
+		// Whitespace only → still disabled
+		await input.fill('   ');
+		await expect.element(save).toBeDisabled();
+
+		// Different value → enabled
+		await input.fill('Something else');
+		await expect.element(save).toBeEnabled();
+	});
+
+	it('cancel closes the rename dialog without calling setConversationTitle', async () => {
+		const screen = render(ConversationMenu, { conversation: mockConversation });
+
+		await screen.getByRole('button', { name: 'Conversation actions' }).click();
+		await screen.getByRole('menuitem', { name: /Rename/i }).click();
+
+		await screen.getByRole('textbox').fill('Something else');
+		await screen.getByRole('button', { name: 'Cancel' }).click();
+
+		expect(chatMock.setConversationTitle).not.toHaveBeenCalled();
 	});
 });
