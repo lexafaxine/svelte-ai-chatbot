@@ -364,6 +364,7 @@ function createChatStore() {
 
 		if (toClone.length === 0) return null;
 
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive, only used imperatively
 		const idMap = new Map<string, string>();
 		for (const m of toClone) {
 			idMap.set(m.id, nanoid());
