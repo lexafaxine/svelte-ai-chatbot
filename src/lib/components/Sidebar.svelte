@@ -8,6 +8,7 @@
 	import MoonIcon from '@lucide/svelte/icons/moon';
 	import PanelLeftCloseIcon from '@lucide/svelte/icons/panel-left-close';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import KeyboardIcon from '@lucide/svelte/icons/keyboard';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import XIcon from '@lucide/svelte/icons/x';
 	import { chat } from '$lib/stores/chatStore.svelte';
@@ -18,9 +19,10 @@
 
 	interface Props {
 		onCollapse?: () => void;
+		searchInputRef?: HTMLInputElement | null;
 	}
 
-	let { onCollapse }: Props = $props();
+	let { onCollapse, searchInputRef = $bindable(null) }: Props = $props();
 
 	const currentId = $derived(page.params.conversationId ?? null);
 	const sortedConversations = $derived(
@@ -34,6 +36,7 @@
 	);
 
 	let settingsOpen = $state(false);
+	let shortcutsOpen = $state(false);
 	let apiKeyInput = $state('');
 
 	function openSettings() {
@@ -46,6 +49,16 @@
 		saveApiKey(trimmed || null);
 		settingsOpen = false;
 	}
+
+	const isMac = $derived(
+		typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
+	);
+	const modKey = $derived(isMac ? '⌘' : 'Ctrl');
+
+	const shortcuts = $derived([
+		{ keys: `${modKey} + K`, description: 'Search conversations' },
+		{ keys: `${modKey} + Shift + O`, description: 'New conversation' }
+	]);
 </script>
 
 <aside
@@ -67,6 +80,7 @@
 				type="text"
 				placeholder="Search chats..."
 				bind:value={searchQuery}
+				bind:ref={searchInputRef}
 				class="h-8 pr-8 pl-8"
 				aria-label="Search conversations"
 			/>
@@ -119,6 +133,10 @@
 			<SettingsIcon />
 			Settings
 		</Button>
+		<Button variant="ghost" class="w-full justify-start" onclick={() => (shortcutsOpen = true)}>
+			<KeyboardIcon />
+			Shortcuts
+		</Button>
 		<Button variant="ghost" class="w-full justify-start" onclick={() => theme.toggle()}>
 			{#if theme.current === 'dark'}
 				<SunIcon />
@@ -149,5 +167,25 @@
 			<Button variant="outline" onclick={() => (settingsOpen = false)}>Cancel</Button>
 			<Button onclick={handleSaveKey}>Save</Button>
 		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={shortcutsOpen}>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>Keyboard shortcuts</Dialog.Title>
+			<Dialog.Description>Available keyboard shortcuts for quick navigation.</Dialog.Description>
+		</Dialog.Header>
+		<div class="flex flex-col gap-3 py-2">
+			{#each shortcuts as shortcut (shortcut.keys)}
+				<div class="flex items-center justify-between">
+					<span class="text-sm">{shortcut.description}</span>
+					<kbd
+						class="rounded border border-border bg-muted px-2 py-1 font-mono text-xs text-muted-foreground"
+						>{shortcut.keys}</kbd
+					>
+				</div>
+			{/each}
+		</div>
 	</Dialog.Content>
 </Dialog.Root>
