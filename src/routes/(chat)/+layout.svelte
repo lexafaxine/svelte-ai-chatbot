@@ -9,7 +9,7 @@
 	let sidebarOpen = $state(true);
 </script>
 
-<div class="flex h-screen w-screen overflow-hidden">
+<div class="flex h-dvh w-screen overflow-hidden">
 	<!-- Mobile backdrop -->
 	<button
 		type="button"
