@@ -4,9 +4,10 @@
 	import ChatMessage from '$lib/components/ChatMessage.svelte';
 	import ModelSwitcher from '$lib/components/ModelSwitcher.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import DownloadIcon from '@lucide/svelte/icons/download';
+	import FileDownIcon from '@lucide/svelte/icons/file-down';
 	import { chat } from '$lib/stores/chatStore.svelte';
 	import { getActivePath, getSiblings } from '$lib/utils/message-tree';
+	import { downloadConversationJSON } from '$lib/utils/export';
 
 	const conversationId = $derived(page.params.conversationId!);
 	const conversation = $derived(chat.getConversation(conversationId));
@@ -77,17 +78,15 @@
 				model={conversation.model}
 				onModelChange={(model) => chat.setConversationModel(conversation.id, model)}
 			/>
-			<div class="flex items-center gap-1">
-				<Button
-					variant="ghost"
-					size="icon"
-					class="h-8 w-8"
-					disabled
-					aria-label="Export conversation"
-				>
-					<DownloadIcon class="h-4 w-4" />
-				</Button>
-			</div>
+			<Button
+				variant="ghost"
+				class="h-8 gap-1.5 px-2 text-sm font-medium"
+				aria-label="Export conversation as JSON"
+				onclick={() => downloadConversationJSON(conversation, activePath)}
+			>
+				<FileDownIcon class="h-4 w-4" />
+				Export JSON
+			</Button>
 		</div>
 	{/if}
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto">
