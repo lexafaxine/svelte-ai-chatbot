@@ -14,8 +14,7 @@
 	import { theme } from '$lib/stores/theme.svelte';
 	import { loadApiKey, saveApiKey } from '$lib/stores/persistence';
 	import { searchConversations } from '$lib/utils/search';
-	import { fade } from 'svelte/transition';
-	import ConversationMenu from './ConversationMenu.svelte';
+	import ConversationListItem from './ConversationListItem.svelte';
 
 	interface Props {
 		onCollapse?: () => void;
@@ -91,35 +90,12 @@
 			{:else}
 				<ul class="flex flex-col gap-1">
 					{#each searchResults as result (result.conversation.id)}
-						{@const conversation = result.conversation}
-						{@const isActive = conversation.id === currentId}
-						<li class="group relative">
-							<Button
-								href={`/chat/${conversation.id}`}
-								variant={isActive ? 'secondary' : 'ghost'}
-								class="h-auto w-full items-start justify-start py-2 pr-9 text-left"
-							>
-								<span class="flex min-w-0 flex-1 flex-col gap-0.5">
-									<span class="truncate">{conversation.title}</span>
-									{#each result.messageSnippets as snippet, i (i)}
-										<span class="truncate text-xs font-normal text-muted-foreground">
-											{snippet.before}<span class="font-semibold text-foreground"
-												>{snippet.match}</span
-											>{snippet.after}
-										</span>
-									{/each}
-									{#if result.totalMessageMatches > result.messageSnippets.length}
-										<span class="truncate text-xs font-normal text-muted-foreground italic">
-											+{result.totalMessageMatches - result.messageSnippets.length} more
-										</span>
-									{/if}
-								</span>
-							</Button>
-							<ConversationMenu
-								{conversation}
-								triggerClass="absolute right-1.5 top-1/2 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-							/>
-						</li>
+						<ConversationListItem
+							conversation={result.conversation}
+							isActive={result.conversation.id === currentId}
+							snippets={result.messageSnippets}
+							totalMatches={result.totalMessageMatches}
+						/>
 					{/each}
 				</ul>
 			{/if}
@@ -128,26 +104,7 @@
 		{:else}
 			<ul class="flex flex-col gap-1">
 				{#each sortedConversations as conversation (conversation.id)}
-					{@const isActive = conversation.id === currentId}
-					<li class="group relative">
-						<Button
-							href={`/chat/${conversation.id}`}
-							variant={isActive ? 'secondary' : 'ghost'}
-							class="h-auto w-full justify-start py-2 pr-9 text-left"
-						>
-							<span class="flex-1 truncate">
-								{#key conversation.title}
-									<span class="block truncate" in:fade={{ duration: 200 }}>
-										{conversation.title}
-									</span>
-								{/key}
-							</span>
-						</Button>
-						<ConversationMenu
-							{conversation}
-							triggerClass="absolute right-1.5 top-1/2 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-						/>
-					</li>
+					<ConversationListItem {conversation} isActive={conversation.id === currentId} />
 				{/each}
 			</ul>
 		{/if}
