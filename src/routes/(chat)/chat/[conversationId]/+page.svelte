@@ -107,7 +107,7 @@
 			/>
 			<Button
 				variant="ghost"
-				class="h-8 gap-1.5 px-2 text-sm font-medium"
+				class="h-8 shrink-0 gap-1.5 px-2 text-sm font-medium"
 				aria-label="Export conversation as JSON"
 				onclick={() => downloadConversationJSON(conversation, activePath)}
 			>

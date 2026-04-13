@@ -16,10 +16,10 @@
 
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger
-		class="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium hover:bg-muted"
+		class="flex min-w-0 shrink cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium hover:bg-muted"
 	>
-		<OpenRouterLogo class="h-5 w-5" />
-		<span class="max-w-50 truncate">{currentLabel}</span>
+		<OpenRouterLogo class="h-5 w-5 shrink-0" />
+		<span class="truncate">{currentLabel}</span>
 		<ChevronDownIcon class="h-3.5 w-3.5 text-muted-foreground" />
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="start" class="w-72">
