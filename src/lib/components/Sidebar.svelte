@@ -12,6 +12,7 @@
 	import { chat } from '$lib/stores/chatStore.svelte';
 	import { theme } from '$lib/stores/theme.svelte';
 	import { loadApiKey, saveApiKey } from '$lib/stores/persistence';
+	import ConversationMenu from './ConversationMenu.svelte';
 
 	interface Props {
 		onCollapse?: () => void;
@@ -56,15 +57,19 @@
 			<ul class="flex flex-col gap-1">
 				{#each sortedConversations as conversation (conversation.id)}
 					{@const isActive = conversation.id === currentId}
-					<li>
+					<li class="group relative">
 						<Button
 							href={`/chat/${conversation.id}`}
 							variant={isActive ? 'secondary' : 'ghost'}
-							class="h-auto w-full justify-start py-2 text-left"
+							class="h-auto w-full justify-start py-2 pr-9 text-left"
 						>
 							<MessageSquareIcon />
 							<span class="flex-1 truncate">{conversation.title}</span>
 						</Button>
+						<ConversationMenu
+							{conversation}
+							triggerClass="absolute right-1.5 top-1/2 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+						/>
 					</li>
 				{/each}
 			</ul>

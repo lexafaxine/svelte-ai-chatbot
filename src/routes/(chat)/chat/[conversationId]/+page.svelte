@@ -5,7 +5,6 @@
 	import ModelSwitcher from '$lib/components/ModelSwitcher.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import DownloadIcon from '@lucide/svelte/icons/download';
-	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
 	import { chat } from '$lib/stores/chatStore.svelte';
 	import { getActivePath, getSiblings } from '$lib/utils/message-tree';
 
@@ -87,9 +86,6 @@
 					aria-label="Export conversation"
 				>
 					<DownloadIcon class="h-4 w-4" />
-				</Button>
-				<Button variant="ghost" size="icon" class="h-8 w-8" disabled aria-label="More actions">
-					<MoreHorizontalIcon class="h-4 w-4" />
 				</Button>
 			</div>
 		</div>
