@@ -343,6 +343,76 @@ function createChatStore() {
 		}
 	}
 
+	function forkConversation(
+		conversationId: string,
+		atMessageId: string,
+		mode: 'active-path' | 'full-history'
+	): string | null {
+		const conv = getConversation(conversationId);
+		if (!conv) return null;
+
+		const convMessages = messages.filter((m) => m.conversationId === conversationId);
+
+		let toClone: Message[];
+		if (mode === 'active-path') {
+			toClone = getActivePath(convMessages, atMessageId);
+		} else {
+			const byId = new Map(convMessages.map((m) => [m.id, m]));
+			const targetTime = byId.get(atMessageId)?.createdAt ?? Infinity;
+			toClone = convMessages.filter((m) => m.createdAt <= targetTime);
+		}
+
+		if (toClone.length === 0) return null;
+
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive, only used imperatively
+		const idMap = new Map<string, string>();
+		for (const m of toClone) {
+			idMap.set(m.id, nanoid());
+		}
+
+		const now = Date.now();
+		const newConvId = nanoid();
+
+		const cloned: Message[] = toClone.map((m) => ({
+			id: idMap.get(m.id)!,
+			conversationId: newConvId,
+			parentId: m.parentId && idMap.has(m.parentId) ? idMap.get(m.parentId)! : null,
+			role: m.role,
+			content: m.content,
+			model: m.model,
+			createdAt: m.createdAt,
+			...(m.reasoning ? { reasoning: m.reasoning } : {})
+		}));
+
+		const newActiveChildMap: Record<string, string> = {};
+		for (const [parentKey, childId] of Object.entries(conv.activeChildMap)) {
+			const newParentKey =
+				parentKey === 'root' ? 'root' : idMap.has(parentKey) ? idMap.get(parentKey)! : null;
+			const newChildId = idMap.get(childId);
+			if (newParentKey && newChildId) {
+				newActiveChildMap[newParentKey] = newChildId;
+			}
+		}
+
+		const newTailId = idMap.get(atMessageId) ?? null;
+
+		const newConv: Conversation = {
+			id: newConvId,
+			title: `Fork of ${conv.title}`,
+			model: conv.model,
+			tailId: newTailId,
+			activeChildMap: mode === 'active-path' ? {} : newActiveChildMap,
+			createdAt: now,
+			updatedAt: now,
+			autoTitlePending: false
+		};
+
+		conversations = [newConv, ...conversations];
+		messages = [...messages, ...cloned];
+
+		return newConvId;
+	}
+
 	return {
 		get conversations() {
 			return conversations;
@@ -369,7 +439,8 @@ function createChatStore() {
 		editAndResubmit,
 		streamReply,
 		stopStreaming,
-		clearStreamError
+		clearStreamError,
+		forkConversation
 	};
 }
 

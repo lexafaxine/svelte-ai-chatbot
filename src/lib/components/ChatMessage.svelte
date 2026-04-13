@@ -5,6 +5,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import GitForkIcon from '@lucide/svelte/icons/git-fork';
 	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 
@@ -15,6 +16,7 @@
 		onSwitchSibling?: (targetId: string) => void;
 		onEdit?: (messageId: string, newContent: string) => void;
 		onRegenerate?: (messageId: string) => void;
+		onFork?: (messageId: string) => void;
 	}
 
 	let {
@@ -23,7 +25,8 @@
 		siblings = [],
 		onSwitchSibling,
 		onEdit,
-		onRegenerate
+		onRegenerate,
+		onFork
 	}: Props = $props();
 
 	const isUser = $derived(message.role === 'user');
@@ -69,21 +72,30 @@
 				</div>
 			</div>
 		{:else}
-			<div class="flex items-start gap-1">
+			<div
+				class="max-w-[90%] rounded-2xl bg-primary px-4 py-2 whitespace-pre-wrap text-primary-foreground"
+			>
+				{message.content}
+			</div>
+			<div class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
 				<Button
 					variant="ghost"
 					size="icon"
-					class="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+					class="h-7 w-7"
 					onclick={startEdit}
 					aria-label="Edit message"
 				>
 					<PencilIcon class="h-3.5 w-3.5" />
 				</Button>
-				<div
-					class="max-w-[90%] rounded-2xl bg-primary px-4 py-2 whitespace-pre-wrap text-primary-foreground"
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-7 w-7"
+					onclick={() => onFork?.(message.id)}
+					aria-label="Fork conversation from here"
 				>
-					{message.content}
-				</div>
+					<GitForkIcon class="h-3.5 w-3.5" />
+				</Button>
 			</div>
 		{/if}
 		{#if hasSiblings && !editing}
@@ -180,15 +192,24 @@
 		{/if}
 
 		{#if !isStreaming && hasContent}
-			<div class="flex items-center gap-1">
+			<div class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
 				<Button
 					variant="ghost"
 					size="icon"
-					class="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+					class="h-7 w-7"
 					onclick={() => onRegenerate?.(message.id)}
 					aria-label="Regenerate response"
 				>
 					<RefreshCwIcon class="h-3.5 w-3.5" />
+				</Button>
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-7 w-7"
+					onclick={() => onFork?.(message.id)}
+					aria-label="Fork conversation from here"
+				>
+					<GitForkIcon class="h-3.5 w-3.5" />
 				</Button>
 			</div>
 		{/if}
