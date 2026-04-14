@@ -42,6 +42,19 @@
 
 	let editing = $state(false);
 	let editValue = $state('');
+	let actionsOpen = $state(false);
+
+	function toggleActions(e: MouseEvent) {
+		e.stopPropagation();
+		actionsOpen = !actionsOpen;
+	}
+
+	$effect(() => {
+		if (!actionsOpen) return;
+		const handler = () => (actionsOpen = false);
+		window.addEventListener('click', handler);
+		return () => window.removeEventListener('click', handler);
+	});
 
 	function startEdit() {
 		editValue = message.content;
@@ -73,11 +86,21 @@
 			</div>
 		{:else}
 			<div
-				class="max-w-[90%] rounded-2xl bg-primary px-4 py-2 whitespace-pre-wrap text-primary-foreground"
+				role="button"
+				tabindex="0"
+				onclick={toggleActions}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') toggleActions(e as unknown as MouseEvent);
+				}}
+				class="max-w-[90%] cursor-pointer rounded-2xl bg-primary px-4 py-2 whitespace-pre-wrap text-primary-foreground md:cursor-default"
 			>
 				{message.content}
 			</div>
-			<div class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+			<div
+				class="flex items-center gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100"
+				class:max-md:opacity-100={actionsOpen}
+				class:max-md:opacity-0={!actionsOpen}
+			>
 				<Button
 					variant="ghost"
 					size="icon"
@@ -192,7 +215,9 @@
 		{/if}
 
 		{#if !isStreaming && hasContent}
-			<div class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+			<div
+				class="flex items-center gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100"
+			>
 				<Button
 					variant="ghost"
 					size="icon"
