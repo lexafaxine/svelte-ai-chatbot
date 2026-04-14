@@ -4,8 +4,11 @@ export interface ModelOption {
 }
 
 export const MODELS: ModelOption[] = [
-	{ id: 'deepseek/deepseek-r1-distill-llama-70b', label: 'DeepSeek R1 Distill Llama 70B' },
-	{ id: 'google/gemma-4-31b-it:free', label: 'Gemma 4 31B (free)' },
+	{ id: 'deepseek/deepseek-r1', label: 'DeepSeek R1' },
+	{ id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+	{ id: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5' },
+	{ id: 'openai/o4-mini', label: 'o4-mini' },
+	{ id: 'nvidia/nemotron-3-super-120b-a12b:free', label: 'Nemotron 3 Super 120B (free)' },
 	{ id: 'minimax/minimax-m2.5:free', label: 'MiniMax M2.5 (free)' }
 ];
 

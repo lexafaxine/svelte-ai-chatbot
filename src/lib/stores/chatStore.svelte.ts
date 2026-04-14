@@ -38,8 +38,8 @@ function makePreliminaryTitle(text: string): string {
 }
 
 function createChatStore() {
-	let conversations = $state<Conversation[]>(browser ? loadConversations() : []);
-	let messages = $state<Message[]>(browser ? loadMessages() : []);
+	let conversations = $state.raw<Conversation[]>(browser ? loadConversations() : []);
+	let messages = $state.raw<Message[]>(browser ? loadMessages() : []);
 
 	// Per-conversation streaming state so multiple conversations can stream concurrently.
 	// Keys are conversationId; values are the assistant message id / error string.

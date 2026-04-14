@@ -44,7 +44,14 @@ export const POST: RequestHandler = async ({ request }) => {
 	const openrouter = createOpenRouter({ apiKey });
 	const result = streamText({
 		model: openrouter(body.model),
-		messages: body.messages
+		messages: body.messages,
+		// OpenRouter silently ignores `reasoning` for models that don't support it,
+		// so we can pass it unconditionally.
+		providerOptions: {
+			openrouter: {
+				reasoning: { effort: 'medium' }
+			}
+		}
 	});
 
 	const encoder = new TextEncoder();

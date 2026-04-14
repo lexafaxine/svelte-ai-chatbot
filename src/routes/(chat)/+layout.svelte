@@ -15,13 +15,13 @@
 		const mod = e.metaKey || e.ctrlKey;
 		if (!mod) return;
 
-		if (e.key === 'k' && !e.shiftKey) {
+		if (e.code === 'KeyK' && !e.shiftKey) {
 			e.preventDefault();
 			if (!sidebarOpen) sidebarOpen = true;
 			requestAnimationFrame(() => searchInputRef?.focus());
 		}
 
-		if (e.key === 'O' && e.shiftKey) {
+		if (e.code === 'KeyO' && e.shiftKey) {
 			e.preventDefault();
 			goto(resolve('/'));
 		}
