@@ -21,15 +21,28 @@ const DEFAULT_TITLE = 'New chat';
 const MAX_TITLE_LEN = 60;
 const PRELIMINARY_TITLE_LEN = 50;
 
+/**
+ * Normalize a AI model-generated title: collapse whitespace, strip wrapping
+ * quotes and clip to {@link MAX_TITLE_LEN}.
+ *
+ * @param raw — title text returned by the title API.
+ * @returns the cleaned title.
+ */
 function sanitizeTitle(raw: string): string {
 	let t = raw.trim().replace(/\s+/g, ' ');
-	// Strip leading/trailing matched quotes (single, double, or CJK) — models
-	// love to wrap titles even when told not to.
+	// Strip leading/trailing matched quotes (single, double, or CJK).
 	t = t.replace(/^["'“”‘’《「『]+|["'“”‘’》」』.。!！?？,，;；:：]+$/g, '').trim();
 	if (t.length > MAX_TITLE_LEN) t = t.slice(0, MAX_TITLE_LEN).trimEnd() + '…';
 	return t;
 }
 
+/**
+ * Derive a temporary title from the user's first message, used until the
+ * async AI title arrives.
+ *
+ * @param text — the first user message content.
+ * @returns the placeholder title (`'New chat'` if the input is empty).
+ */
 function makePreliminaryTitle(text: string): string {
 	const normalized = text.trim().replace(/\s+/g, ' ');
 	if (!normalized) return DEFAULT_TITLE;
@@ -37,12 +50,18 @@ function makePreliminaryTitle(text: string): string {
 	return normalized.slice(0, PRELIMINARY_TITLE_LEN).trimEnd() + '…';
 }
 
+/**
+ * Build the singleton chat store. Owns the full conversation + message
+ * state, the per-conversation streaming/error slots, and all CRUD,
+ * branching, streaming, and forking operations.
+ */
 function createChatStore() {
 	let conversations = $state.raw<Conversation[]>(browser ? loadConversations() : []);
 	let messages = $state.raw<Message[]>(browser ? loadMessages() : []);
 
-	// Per-conversation streaming state so multiple conversations can stream concurrently.
-	// Keys are conversationId; values are the assistant message id / error string.
+	// Per-conversation streaming state so multiple conversations can stream
+	// concurrently. Keys are conversationId; values are the assistant message
+	// id / error string.
 	let streamingByConv = $state<Record<string, string>>({});
 	let errorByConv = $state<Record<string, string>>({});
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive, only used imperatively
@@ -55,6 +74,14 @@ function createChatStore() {
 		});
 	}
 
+	/**
+	 * Apply a partial update to a conversation by id and optionally bump
+	 * `updatedAt`. No-op if the id isn't found.
+	 *
+	 * @param id — conversation id.
+	 * @param patch — fields to merge in.
+	 * @param updateTime — when `true` (default) sets `updatedAt = Date.now()`.
+	 */
 	function touchConversation(id: string, patch: Partial<Conversation> = {}, updateTime = true) {
 		conversations = conversations.map((c) =>
 			c.id === id ? { ...c, ...patch, ...(updateTime ? { updatedAt: Date.now() } : {}) } : c
@@ -86,6 +113,13 @@ function createChatStore() {
 		return conversations.find((c) => c.id === id) ?? null;
 	}
 
+	/**
+	 * Record which child should be considered "active" at a given fork point.
+	 *
+	 * @param conversationId — conversation containing the fork.
+	 * @param parentId — fork-point parent id; `null` for root-level forks.
+	 * @param childId — id of the child to make active (visible) at that fork.
+	 */
 	function updateActiveChild(conversationId: string, parentId: string | null, childId: string) {
 		const conv = getConversation(conversationId);
 		if (!conv) return;
@@ -94,6 +128,18 @@ function createChatStore() {
 		touchConversation(conversationId, { activeChildMap: map });
 	}
 
+	/**
+	 * Append a new message under `parentId` and advance the conversation's
+	 * `tailId` to it. If this is the first user message, also seeds a
+	 * preliminary title (later replaced by the AI title).
+	 *
+	 * @param conversationId — conversation to append to.
+	 * @param role — `'user'` or `'assistant'`.
+	 * @param content — initial text (empty for assistant messages that will be streamed into).
+	 * @param parentId — parent message id; `null` for the root message.
+	 * @param model — model id to record on the message.
+	 * @returns the new message.
+	 */
 	function appendMessage(
 		conversationId: string,
 		role: Role,
@@ -126,18 +172,34 @@ function createChatStore() {
 		messages = messages.map((m) => (m.id === id ? { ...m, ...patch } : m));
 	}
 
-	function setTail(conversationId: string, tailId: string | null) {
-		touchConversation(conversationId, { tailId });
-	}
-
+	/**
+	 * Rename a conversation and clear `autoTitlePending` so the AI title
+	 * generator stops trying to overwrite it. Does not bump `updatedAt`.
+	 *
+	 * @param id — conversation id.
+	 * @param title — new title.
+	 */
 	function setConversationTitle(id: string, title: string) {
 		touchConversation(id, { title, autoTitlePending: false }, false);
 	}
 
+	/**
+	 * Change the model used for the next user turn in this conversation.
+	 *
+	 * @param id — conversation id.
+	 * @param model — new model id.
+	 */
 	function setConversationModel(id: string, model: string) {
 		touchConversation(id, { model });
 	}
 
+	/**
+	 * Switch the visible branch at a fork point to a different sibling, then
+	 * descend along that branch to a leaf so the full new path is visible.
+	 *
+	 * @param conversationId — conversation id.
+	 * @param targetMessageId — sibling to switch to.
+	 */
 	function switchSibling(conversationId: string, targetMessageId: string) {
 		const target = messages.find((m) => m.id === targetMessageId);
 		if (!target) return;
@@ -150,12 +212,28 @@ function createChatStore() {
 		touchConversation(conversationId, { activeChildMap: map, tailId: leafId });
 	}
 
+	/**
+	 * Re-stream a fresh assistant reply as a sibling of an existing one
+	 * (same parent user message). The new reply becomes the active branch.
+	 *
+	 * @param conversationId — conversation id.
+	 * @param assistantMessageId — id of the assistant message to regenerate from.
+	 */
 	function regenerate(conversationId: string, assistantMessageId: string) {
 		const assistant = messages.find((m) => m.id === assistantMessageId);
 		if (!assistant || assistant.role !== 'assistant' || !assistant.parentId) return;
 		streamReply(conversationId, assistant.parentId);
 	}
 
+	/**
+	 * Insert a new user message as a sibling of an existing one (same
+	 * parent), then stream a fresh assistant reply under it. The original
+	 * branch stays in storage but falls off the active path.
+	 *
+	 * @param conversationId — conversation id.
+	 * @param oldUserMsgId — user message being edited.
+	 * @param newContent — replacement text.
+	 */
 	function editAndResubmit(conversationId: string, oldUserMsgId: string, newContent: string) {
 		const oldMsg = messages.find((m) => m.id === oldUserMsgId);
 		if (!oldMsg || oldMsg.role !== 'user') return;
@@ -174,19 +252,25 @@ function createChatStore() {
 	}
 
 	/**
-	 * Append an empty assistant message as a child of `userMessageId`, then
-	 * stream a reply into it from `/api/chat`.
+	 * Append an empty assistant message under `userMessageId`, then stream
+	 * tokens from `/api/chat` into it.
 	 *
-	 * Wire protocol: the server returns NDJSON, one JSON object per line, of
-	 * shape `{type: 'text'|'reasoning', delta}` or `{type: 'error', message}`.
-	 * Text / reasoning deltas are accumulated into the assistant's `content` /
-	 * `reasoning` via `patchMessage`. An `error` frame is surfaced on the
-	 * per-conversation `streamError` slot without throwing.
+	 * Wire format: NDJSON, one JSON object per line, of shape
+	 * `{type: 'text'|'reasoning', delta}` or `{type: 'error', message}`.
+	 * Text / reasoning deltas accumulate into the assistant's `content` /
+	 * `reasoning` via {@link patchMessage}. An `error` frame is surfaced on
+	 * the per-conversation `streamError` slot without throwing.
 	 *
-	 * Abort: callers trigger `stopStreaming(conversationId)` which fires the
-	 * stored AbortController. On abort we overwrite the placeholder with
-	 * STOPPED_MESSAGE *only* when no tokens had arrived — partial outputs are
-	 * left intact so the message remains valid history for the next turn.
+	 * Abort: callers trigger {@link stopStreaming} which fires the stored
+	 * AbortController. On abort we overwrite the placeholder with
+	 * {@link STOPPED_MESSAGE} *only* when no tokens had arrived — partial
+	 * outputs are kept so the message remains valid history for the next
+	 * turn. If a stream is already running for this conversation, it is
+	 * aborted first so a new one can take over.
+	 *
+	 * @param conversationId — conversation id.
+	 * @param userMessageId — id of the user message that should become the parent of the new reply.
+	 * @returns a promise that resolves once the stream completes (or aborts / errors).
 	 */
 	async function streamReply(conversationId: string, userMessageId: string): Promise<void> {
 		const conversation = getConversation(conversationId);
@@ -205,7 +289,7 @@ function createChatStore() {
 			conversation.model
 		);
 
-		// If this conversation already has a stream running, abort it first
+		// If this conversation already has a stream running, abort it first.
 		abortByConv.get(conversationId)?.abort();
 
 		const abort = new AbortController();
@@ -274,7 +358,6 @@ function createChatStore() {
 			if (serverError) {
 				errorByConv = { ...errorByConv, [conversationId]: serverError };
 			} else if (content) {
-				// generate AI title when first response success
 				const userMsg = messages.find((m) => m.id === userMessageId);
 				if (userMsg) {
 					void generateTitle(conversationId, userMsg.content, content);
@@ -299,6 +382,14 @@ function createChatStore() {
 		}
 	}
 
+	/**
+	 * Best-effort AI title generation. No-op if the conversation no longer
+	 * needs an auto-title (was deleted, renamed, or already titled). 
+	 *
+	 * @param conversationId — conversation id.
+	 * @param userText — first user message content.
+	 * @param assistantText — first assistant reply content.
+	 */
 	async function generateTitle(conversationId: string, userText: string, assistantText: string) {
 		const conv = getConversation(conversationId);
 		if (!conv?.autoTitlePending) return;
@@ -343,6 +434,15 @@ function createChatStore() {
 		}
 	}
 
+	/**
+	 * Clone a conversation up to a chosen message into a brand-new
+	 * conversation. 
+	 *
+	 * @param conversationId — source conversation id.
+	 * @param atMessageId — message that becomes the new tail.
+	 * @param mode — `'active-path'` to clone the visible thread only; `'full-history'` to keep every branch.
+	 * @returns the new conversation's id, or `null` if the source / target was missing or yielded no messages.
+	 */
 	function forkConversation(
 		conversationId: string,
 		atMessageId: string,
@@ -431,7 +531,6 @@ function createChatStore() {
 		getConversation,
 		appendMessage,
 		patchMessage,
-		setTail,
 		setConversationTitle,
 		setConversationModel,
 		switchSibling,
