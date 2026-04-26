@@ -2,21 +2,21 @@ import type { Conversation, Message } from '$lib/types';
 export interface ExportedConversation {
 	title: string;
 	model: string;
-	createdAt: string; 
-	updatedAt: string; 
+	createdAt: string;
+	updatedAt: string;
 	messages: {
 		role: string;
 		content: string;
 		model: string;
 		reasoning?: string;
-		createdAt: string; 
+		createdAt: string;
 	}[];
 }
 
 /**
  * Build the JSON-serializable export payload from a conversation snapshot.
  *
- * Only the messages on the supplied `activePath` are included 
+ * Only the messages on the supplied `activePath` are included
  * @param conversation — the conversation being exported.
  * @param activePath — the visible message thread, root-first
  * @returns the export payload.

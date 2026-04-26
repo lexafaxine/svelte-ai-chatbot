@@ -384,7 +384,7 @@ function createChatStore() {
 
 	/**
 	 * Best-effort AI title generation. No-op if the conversation no longer
-	 * needs an auto-title (was deleted, renamed, or already titled). 
+	 * needs an auto-title (was deleted, renamed, or already titled).
 	 *
 	 * @param conversationId — conversation id.
 	 * @param userText — first user message content.
@@ -436,7 +436,7 @@ function createChatStore() {
 
 	/**
 	 * Clone a conversation up to a chosen message into a brand-new
-	 * conversation. 
+	 * conversation.
 	 *
 	 * @param conversationId — source conversation id.
 	 * @param atMessageId — message that becomes the new tail.

@@ -30,7 +30,7 @@ function read<T>(key: string, fallback: T): T {
 
 /**
  * JSON-stringify and write a value to localStorage. Silently drops the write
- * outside the browser or when storage is full / disabled 
+ * outside the browser or when storage is full / disabled
  *
  * @param key — localStorage key.
  * @param value — anything JSON-serializable.
