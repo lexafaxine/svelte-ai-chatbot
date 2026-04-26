@@ -46,7 +46,6 @@ describe('conversations persistence', () => {
 				id: 'c1',
 				title: 'First',
 				model: 'm',
-				tailId: null,
 				activeChildMap: {},
 				createdAt: 1,
 				updatedAt: 2

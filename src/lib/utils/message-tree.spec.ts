@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getActivePath, getSiblings, getLeafDescendant } from './message-tree';
+import { getActivePath, getSiblings, getChainTo } from './message-tree';
 import type { Message } from '$lib/types';
 
 function msg(overrides: Partial<Message> & { id: string }): Message {
@@ -15,39 +15,49 @@ function msg(overrides: Partial<Message> & { id: string }): Message {
 }
 
 describe('getActivePath', () => {
-	it('returns empty array when tailId is null', () => {
-		expect(getActivePath([], null)).toEqual([]);
+	it('returns empty array when activeChildMap is empty', () => {
+		expect(getActivePath([], 'c1', {})).toEqual([]);
 	});
 
-	it('returns empty array when tailId is not found in messages', () => {
+	it('returns empty array when the root entry points to an unknown message', () => {
 		const messages = [msg({ id: 'a' })];
-		expect(getActivePath(messages, 'ghost')).toEqual([]);
+		expect(getActivePath(messages, 'c1', { root: 'ghost' })).toEqual([]);
 	});
 
-	it('walks up a linear chain and returns root-first order', () => {
+	it('walks down a linear chain and returns root-first order', () => {
 		const a = msg({ id: 'a', parentId: null });
 		const b = msg({ id: 'b', parentId: 'a' });
 		const c = msg({ id: 'c', parentId: 'b' });
 
-		const path = getActivePath([c, a, b], 'c');
+		const path = getActivePath([c, a, b], 'c1', { root: 'a', a: 'b', b: 'c' });
 
 		expect(path.map((m) => m.id)).toEqual(['a', 'b', 'c']);
 	});
 
-	it('ignores sibling branches that are not on the path to tailId', () => {
+	it('respects the chosen branch at a fork point', () => {
 		const u = msg({ id: 'u', parentId: null, role: 'user' });
 		const a1 = msg({ id: 'a1', parentId: 'u', role: 'assistant' });
 		const a2 = msg({ id: 'a2', parentId: 'u', role: 'assistant' });
 
-		const path = getActivePath([u, a1, a2], 'a2');
+		const path = getActivePath([u, a1, a2], 'c1', { root: 'u', u: 'a2' });
 
 		expect(path.map((m) => m.id)).toEqual(['u', 'a2']);
 	});
 
-	it('stops at the first message whose parent does not exist (orphan chain)', () => {
-		const orphan = msg({ id: 'o', parentId: 'missing' });
-		const path = getActivePath([orphan], 'o');
-		expect(path.map((m) => m.id)).toEqual(['o']);
+	it('stops when a node has no entry in the map (incomplete descent)', () => {
+		const a = msg({ id: 'a', parentId: null });
+		const b = msg({ id: 'b', parentId: 'a' });
+
+		const path = getActivePath([a, b], 'c1', { root: 'a' }); // no entry for 'a'
+		expect(path.map((m) => m.id)).toEqual(['a']);
+	});
+
+	it('ignores messages from other conversations', () => {
+		const a = msg({ id: 'a', conversationId: 'c1' });
+		const b = msg({ id: 'b', conversationId: 'c2' });
+
+		const path = getActivePath([a, b], 'c1', { root: 'a' });
+		expect(path.map((m) => m.id)).toEqual(['a']);
 	});
 });
 
@@ -82,54 +92,21 @@ describe('getSiblings', () => {
 	});
 });
 
-describe('getLeafDescendant', () => {
-	it('returns startId when it has no children', () => {
-		const a = msg({ id: 'a' });
-		const map: Record<string, string> = {};
-		expect(getLeafDescendant([a], 'a', map)).toBe('a');
+describe('getChainTo', () => {
+	it('returns empty when messageId is unknown', () => {
+		expect(getChainTo([msg({ id: 'a' })], 'ghost')).toEqual([]);
 	});
 
-	it('follows activeChildMap down to the leaf', () => {
+	it('walks up via parentId and returns root-first order', () => {
 		const a = msg({ id: 'a' });
-		const b = msg({ id: 'b', parentId: 'a', createdAt: 1 });
-		const c = msg({ id: 'c', parentId: 'b', createdAt: 2 });
-		const map: Record<string, string> = { a: 'b', b: 'c' };
+		const b = msg({ id: 'b', parentId: 'a' });
+		const c = msg({ id: 'c', parentId: 'b' });
 
-		expect(getLeafDescendant([a, b, c], 'a', map)).toBe('c');
+		expect(getChainTo([c, a, b], 'c').map((m) => m.id)).toEqual(['a', 'b', 'c']);
 	});
 
-	it('picks the latest child and records it when map has no entry', () => {
-		const a = msg({ id: 'a' });
-		const b1 = msg({ id: 'b1', parentId: 'a', createdAt: 1 });
-		const b2 = msg({ id: 'b2', parentId: 'a', createdAt: 5 });
-		const map: Record<string, string> = {};
-
-		expect(getLeafDescendant([a, b1, b2], 'a', map)).toBe('b2');
-		expect(map['a']).toBe('b2');
-	});
-
-	it('falls back to latest child when mapped child no longer exists', () => {
-		const a = msg({ id: 'a' });
-		const b = msg({ id: 'b', parentId: 'a', createdAt: 1 });
-		const map: Record<string, string> = { a: 'deleted' };
-
-		expect(getLeafDescendant([a, b], 'a', map)).toBe('b');
-		expect(map['a']).toBe('b');
-	});
-
-	it('walks through a branched tree respecting the map at each level', () => {
-		//   a
-		//  / \
-		// b1  b2
-		//     |
-		//    c1
-		const a = msg({ id: 'a' });
-		const b1 = msg({ id: 'b1', parentId: 'a', createdAt: 1 });
-		const b2 = msg({ id: 'b2', parentId: 'a', createdAt: 2 });
-		const c1 = msg({ id: 'c1', parentId: 'b2', createdAt: 3 });
-		const map: Record<string, string> = { a: 'b2' };
-
-		expect(getLeafDescendant([a, b1, b2, c1], 'a', map)).toBe('c1');
-		expect(map['b2']).toBe('c1');
+	it('stops at the first message whose parent is missing', () => {
+		const orphan = msg({ id: 'o', parentId: 'gone' });
+		expect(getChainTo([orphan], 'o').map((m) => m.id)).toEqual(['o']);
 	});
 });

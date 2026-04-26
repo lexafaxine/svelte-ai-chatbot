@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import { browser } from '$app/environment';
 import type { Conversation, Message, Role } from '$lib/types';
 import { DEFAULT_MODEL } from '$lib/config/models';
-import { getActivePath, getLeafDescendant } from '$lib/utils/message-tree';
+import { getChainTo } from '$lib/utils/message-tree';
 import { sanitizeTitle, makePreliminaryTitle, DEFAULT_TITLE } from '$lib/utils/title';
 import { buildFork, type ForkMode } from '$lib/utils/fork';
 import { streamChat, requestTitle } from '$lib/api/chatApi';
@@ -54,7 +54,6 @@ function createChatStore() {
 			id: nanoid(),
 			title: DEFAULT_TITLE,
 			model,
-			tailId: null,
 			activeChildMap: {},
 			createdAt: now,
 			updatedAt: now,
@@ -89,9 +88,9 @@ function createChatStore() {
 	}
 
 	/**
-	 * Append a new message under `parentId` and advance the conversation's
-	 * `tailId` to it. If this is the first user message, also seeds a
-	 * preliminary title (later replaced by the AI title).
+	 * Append a new message under `parentId` and record it as the active
+	 * child at that fork point. If this is the first user message, also
+	 * seeds a preliminary title (later replaced by the AI title).
 	 *
 	 * @param conversationId — conversation to append to.
 	 * @param role — `'user'` or `'assistant'`.
@@ -120,11 +119,11 @@ function createChatStore() {
 		updateActiveChild(conversationId, parentId, message.id);
 
 		const conv = getConversation(conversationId);
-		const patch: Partial<Conversation> = { tailId: message.id };
 		if (role === 'user' && parentId === null && conv?.autoTitlePending) {
-			patch.title = makePreliminaryTitle(content);
+			touchConversation(conversationId, { title: makePreliminaryTitle(content) });
+		} else {
+			touchConversation(conversationId);
 		}
-		touchConversation(conversationId, patch);
 		return message;
 	}
 
@@ -154,8 +153,7 @@ function createChatStore() {
 	}
 
 	/**
-	 * Switch the visible branch at a fork point to a different sibling, then
-	 * descend along that branch to a leaf so the full new path is visible.
+	 * Switch the visible branch at a fork point to a different sibling
 	 *
 	 * @param conversationId — conversation id.
 	 * @param targetMessageId — sibling to switch to.
@@ -168,8 +166,7 @@ function createChatStore() {
 		if (!conv) return;
 
 		const map = { ...conv.activeChildMap, [target.parentId ?? 'root']: targetMessageId };
-		const leafId = getLeafDescendant(messages, targetMessageId, map);
-		touchConversation(conversationId, { activeChildMap: map, tailId: leafId });
+		touchConversation(conversationId, { activeChildMap: map });
 	}
 
 	/**
@@ -229,7 +226,7 @@ function createChatStore() {
 		const conversation = getConversation(conversationId);
 		if (!conversation) return;
 
-		const pathUpToUser = getActivePath(messages, userMessageId).map((m) => ({
+		const pathUpToUser = getChainTo(messages, userMessageId).map((m) => ({
 			role: m.role,
 			content: m.content
 		}));

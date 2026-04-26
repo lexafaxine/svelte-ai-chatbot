@@ -1,15 +1,14 @@
 import { nanoid } from 'nanoid';
 import type { Conversation, Message } from '$lib/types';
-import { getActivePath } from './message-tree';
+import { getChainTo } from './message-tree';
 
 /**
  * How much of the source conversation to copy when forking.
  *
- * - `'active-path'`: only the messages on the visible thread up to the chosen
- *   message; the new conversation starts with an empty `activeChildMap`.
+ * - `'active-path'`: only the linear chain from root to the chosen message.
  * - `'full-history'`: every message created at or before the chosen one
- *   (including off-path branches), with `activeChildMap` rewritten to point
- *   at the cloned ids.
+ *   (including off-path branches), with `activeChildMap` rewritten so the
+ *   new conversation opens on the same branch the user was viewing.
  */
 export type ForkMode = 'active-path' | 'full-history';
 
@@ -26,11 +25,13 @@ export interface BuildForkResult {
 }
 
 /**
- * Build a new conversation + cloned message set from a fork point.
+ * Build a new conversation + cloned message set from a fork point. Pure: no
+ * I/O, no global state, no random side effects beyond `nanoid` and
+ * `Date.now()`. Caller is responsible for splicing the result into the store.
  *
  * @param opts.source — the source conversation row.
  * @param opts.sourceMessages — every message belonging to the source.
- * @param opts.atMessageId — message that becomes the new conversation's tail.
+ * @param opts.atMessageId — message that becomes the new conversation's tip.
  * @param opts.mode — see {@link ForkMode}.
  * @returns the new conversation + cloned messages, or `null` if no messages
  *   would be cloned (e.g. `atMessageId` is unknown).
@@ -40,10 +41,10 @@ export function buildFork(opts: BuildForkOpts): BuildForkResult | null {
 
 	let toClone: Message[];
 	if (mode === 'active-path') {
-		toClone = getActivePath(sourceMessages, atMessageId);
+		toClone = getChainTo(sourceMessages, atMessageId);
 	} else {
-		const byId = new Map(sourceMessages.map((m) => [m.id, m]));
-		const targetTime = byId.get(atMessageId)?.createdAt ?? Infinity;
+		const sourceById = new Map(sourceMessages.map((m) => [m.id, m]));
+		const targetTime = sourceById.get(atMessageId)?.createdAt ?? Infinity;
 		toClone = sourceMessages.filter((m) => m.createdAt <= targetTime);
 	}
 
@@ -68,22 +69,32 @@ export function buildFork(opts: BuildForkOpts): BuildForkResult | null {
 		...(m.reasoning ? { reasoning: m.reasoning } : {})
 	}));
 
-	const newActiveChildMap: Record<string, string> = {};
-	for (const [parentKey, childId] of Object.entries(source.activeChildMap)) {
-		const newParentKey =
-			parentKey === 'root' ? 'root' : idMap.has(parentKey) ? idMap.get(parentKey)! : null;
-		const newChildId = idMap.get(childId);
-		if (newParentKey && newChildId) {
-			newActiveChildMap[newParentKey] = newChildId;
+	// Start from the source's map (full-history) or empty (active-path),
+	// then overwrite the chain from root → cloneOfAtMessage so descent is
+	// guaranteed to reach the chosen message.
+	const activeChildMap: Record<string, string> = {};
+	if (mode === 'full-history') {
+		for (const [parentKey, childId] of Object.entries(source.activeChildMap)) {
+			const newParentKey = parentKey === 'root' ? 'root' : idMap.get(parentKey);
+			const newChildId = idMap.get(childId);
+			if (newParentKey && newChildId) {
+				activeChildMap[newParentKey] = newChildId;
+			}
 		}
+	}
+
+	const cloneById = new Map(messages.map((m) => [m.id, m]));
+	let walker: Message | undefined = cloneById.get(idMap.get(atMessageId)!);
+	while (walker) {
+		activeChildMap[walker.parentId ?? 'root'] = walker.id;
+		walker = walker.parentId ? cloneById.get(walker.parentId) : undefined;
 	}
 
 	const conversation: Conversation = {
 		id: newConvId,
 		title: `Fork of ${source.title}`,
 		model: source.model,
-		tailId: idMap.get(atMessageId) ?? null,
-		activeChildMap: mode === 'active-path' ? {} : newActiveChildMap,
+		activeChildMap,
 		createdAt: now,
 		updatedAt: now,
 		autoTitlePending: false

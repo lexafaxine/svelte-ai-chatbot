@@ -6,7 +6,6 @@ function conv(overrides: Partial<Conversation> & { id: string }): Conversation {
 	return {
 		title: '',
 		model: 'm',
-		tailId: null,
 		activeChildMap: {},
 		createdAt: 0,
 		updatedAt: 0,

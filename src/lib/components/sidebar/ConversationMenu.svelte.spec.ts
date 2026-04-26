@@ -45,7 +45,6 @@ describe('ConversationMenu', () => {
 		id: 'conv-123',
 		title: 'Test Conversation',
 		model: 'default',
-		tailId: null,
 		activeChildMap: {},
 		createdAt: 1000,
 		updatedAt: 1000
