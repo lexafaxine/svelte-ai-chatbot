@@ -4,33 +4,10 @@ import type { Conversation, Message, Role } from '$lib/types';
 import { DEFAULT_MODEL } from '$lib/config/models';
 import { getActivePath, getLeafDescendant } from '$lib/utils/message-tree';
 import { sanitizeTitle, makePreliminaryTitle, DEFAULT_TITLE } from '$lib/utils/title';
-import {
-	loadConversations,
-	saveConversations,
-	loadMessages,
-	saveMessages,
-	loadApiKey
-} from './persistence';
-
-type StreamEvent =
-	| { type: 'text'; delta: string }
-	| { type: 'reasoning'; delta: string }
-	| { type: 'error'; message: string };
+import { streamChat, requestTitle } from '$lib/api/chatApi';
+import { loadConversations, saveConversations, loadMessages, saveMessages } from './persistence';
 
 const STOPPED_MESSAGE = 'You stopped the response';
-
-/**
- * Build JSON request headers with the BYOK OpenRouter key attached when
- * the user has configured one.
- *
- * @returns headers ready to drop into a `fetch` call.
- */
-function buildAuthedJSONHeaders(): Record<string, string> {
-	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-	const apiKey = loadApiKey();
-	if (apiKey) headers['x-openrouter-key'] = apiKey;
-	return headers;
-}
 
 /**
  * Build the singleton chat store. Owns the full conversation + message
@@ -234,21 +211,14 @@ function createChatStore() {
 	}
 
 	/**
-	 * Append an empty assistant message under `userMessageId`, then stream
-	 * tokens from `/api/chat` into it.
+	 * Append an empty assistant message under `userMessageId`, then read
+	 * events from {@link streamChat} into it. Text and reasoning deltas
+	 * are appended to the message's `content` / `reasoning`. An `error`
+	 * event is stored on the per-conversation error slot.
 	 *
-	 * Wire format: NDJSON, one JSON object per line, of shape
-	 * `{type: 'text'|'reasoning', delta}` or `{type: 'error', message}`.
-	 * Text / reasoning deltas accumulate into the assistant's `content` /
-	 * `reasoning` via {@link patchMessage}. An `error` frame is surfaced on
-	 * the per-conversation `streamError` slot without throwing.
-	 *
-	 * Abort: callers trigger {@link stopStreaming} which fires the stored
-	 * AbortController. On abort we overwrite the placeholder with
-	 * {@link STOPPED_MESSAGE} *only* when no tokens had arrived — partial
-	 * outputs are kept so the message remains valid history for the next
-	 * turn. If a stream is already running for this conversation, it is
-	 * aborted first so a new one can take over.
+	 * On abort: if no tokens had arrived, replace the placeholder with
+	 * {@link STOPPED_MESSAGE}; otherwise keep the partial text. Starting
+	 * a new stream while one is running aborts the previous one first.
 	 *
 	 * @param conversationId — conversation id.
 	 * @param userMessageId — id of the user message that should become the parent of the new reply.
@@ -286,50 +256,19 @@ function createChatStore() {
 		let serverError: string | null = null;
 
 		try {
-			const response = await fetch('/api/chat', {
-				method: 'POST',
-				headers: buildAuthedJSONHeaders(),
-				body: JSON.stringify({ messages: pathUpToUser, model: conversation.model }),
+			for await (const event of streamChat({
+				messages: pathUpToUser,
+				model: conversation.model,
 				signal: abort.signal
-			});
-
-			if (!response.ok || !response.body) {
-				const errText = await response.text().catch(() => '');
-				throw new Error(errText || `Request failed with status ${response.status}`);
-			}
-
-			const reader = response.body.getReader();
-			const decoder = new TextDecoder();
-			let buffer = '';
-
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				buffer += decoder.decode(value, { stream: true });
-
-				let newlineIndex = buffer.indexOf('\n');
-				while (newlineIndex !== -1) {
-					const line = buffer.slice(0, newlineIndex).trim();
-					buffer = buffer.slice(newlineIndex + 1);
-					newlineIndex = buffer.indexOf('\n');
-					if (!line) continue;
-
-					let event: StreamEvent;
-					try {
-						event = JSON.parse(line) as StreamEvent;
-					} catch {
-						continue;
-					}
-
-					if (event.type === 'text') {
-						content += event.delta;
-						patchMessage(assistant.id, { content });
-					} else if (event.type === 'reasoning') {
-						reasoning += event.delta;
-						patchMessage(assistant.id, { reasoning });
-					} else if (event.type === 'error') {
-						serverError = event.message;
-					}
+			})) {
+				if (event.type === 'text') {
+					content += event.delta;
+					patchMessage(assistant.id, { content });
+				} else if (event.type === 'reasoning') {
+					reasoning += event.delta;
+					patchMessage(assistant.id, { reasoning });
+				} else if (event.type === 'error') {
+					serverError = event.message;
 				}
 			}
 
@@ -372,28 +311,18 @@ function createChatStore() {
 		const conv = getConversation(conversationId);
 		if (!conv?.autoTitlePending) return;
 
-		try {
-			const response = await fetch('/api/title', {
-				method: 'POST',
-				headers: buildAuthedJSONHeaders(),
-				body: JSON.stringify({
-					userMessage: userText,
-					assistantMessage: assistantText,
-					model: conv.model
-				})
-			});
-			if (!response.ok) return;
-			const { title } = (await response.json()) as { title?: string };
-			if (!title) return;
+		const title = await requestTitle({
+			userMessage: userText,
+			assistantMessage: assistantText,
+			model: conv.model
+		});
+		if (!title) return;
 
-			const clean = sanitizeTitle(title);
-			// Re-check: conversation may have been deleted or renamed while we awaited.
-			const latest = getConversation(conversationId);
-			if (!clean || !latest?.autoTitlePending) return;
-			setConversationTitle(conversationId, clean);
-		} catch {
-			// Silent: title generation is best-effort.
-		}
+		const clean = sanitizeTitle(title);
+		// Re-check: conversation may have been deleted or renamed while we awaited.
+		const latest = getConversation(conversationId);
+		if (!clean || !latest?.autoTitlePending) return;
+		setConversationTitle(conversationId, clean);
 	}
 
 	function stopStreaming(conversationId: string) {
