@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import Sidebar from '$lib/components/Sidebar.svelte';
+	import Sidebar from '$lib/components/sidebar/Sidebar.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { cn } from '$lib/utils';
 	import { matchesShortcut, SHORTCUTS } from '$lib/config/shortcuts';

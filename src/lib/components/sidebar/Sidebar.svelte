@@ -13,10 +13,10 @@
 	import XIcon from '@lucide/svelte/icons/x';
 	import { chat } from '$lib/stores/chatStore.svelte';
 	import { theme } from '$lib/stores/theme.svelte';
-	import { loadApiKey, saveApiKey } from '$lib/stores/persistence';
 	import { searchConversations } from '$lib/utils/search';
 	import { SHORTCUTS, formatShortcut } from '$lib/config/shortcuts';
 	import ConversationListItem from './ConversationListItem.svelte';
+	import SettingsDialog from './SettingsDialog.svelte';
 
 	interface Props {
 		onCollapse?: () => void;
@@ -38,18 +38,6 @@
 
 	let settingsOpen = $state(false);
 	let shortcutsOpen = $state(false);
-	let apiKeyInput = $state('');
-
-	function openSettings() {
-		apiKeyInput = loadApiKey() ?? '';
-		settingsOpen = true;
-	}
-
-	function handleSaveKey() {
-		const trimmed = apiKeyInput.trim();
-		saveApiKey(trimmed || null);
-		settingsOpen = false;
-	}
 
 	const isMac = $derived(
 		typeof navigator !== 'undefined' && navigator.userAgent.includes('Macintosh')
@@ -131,7 +119,7 @@
 			<PlusIcon />
 			New chat
 		</Button>
-		<Button variant="ghost" class="w-full justify-start" onclick={openSettings}>
+		<Button variant="ghost" class="w-full justify-start" onclick={() => (settingsOpen = true)}>
 			<SettingsIcon />
 			Settings
 		</Button>
@@ -151,26 +139,7 @@
 	</div>
 </aside>
 
-<Dialog.Root bind:open={settingsOpen}>
-	<Dialog.Content>
-		<Dialog.Header>
-			<Dialog.Title>Settings</Dialog.Title>
-			<Dialog.Description>
-				Enter your OpenRouter API key to use your own account. You can get one at
-				openrouter.ai/keys. The key is stored locally in your browser and sent directly to
-				OpenRouter — it never touches our server.
-			</Dialog.Description>
-		</Dialog.Header>
-		<div class="flex flex-col gap-3 py-2">
-			<label for="api-key-input" class="text-sm font-medium">OpenRouter API Key</label>
-			<Input id="api-key-input" type="password" placeholder="sk-or-..." bind:value={apiKeyInput} />
-		</div>
-		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (settingsOpen = false)}>Cancel</Button>
-			<Button onclick={handleSaveKey}>Save</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+<SettingsDialog bind:open={settingsOpen} />
 
 <Dialog.Root bind:open={shortcutsOpen}>
 	<Dialog.Content>

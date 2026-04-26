@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import ChatInput from '$lib/components/ChatInput.svelte';
-	import ModelSwitcher from '$lib/components/ModelSwitcher.svelte';
+	import ChatInput from '$lib/components/chat/ChatInput.svelte';
+	import ModelSwitcher from '$lib/components/chat/ModelSwitcher.svelte';
 	import { chat } from '$lib/stores/chatStore.svelte';
 	import { DEFAULT_MODEL } from '$lib/config/models';
 
