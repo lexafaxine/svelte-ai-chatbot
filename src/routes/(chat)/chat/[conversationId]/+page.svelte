@@ -5,9 +5,10 @@
 	import ChatInput from '$lib/components/ChatInput.svelte';
 	import ChatMessage from '$lib/components/ChatMessage.svelte';
 	import ModelSwitcher from '$lib/components/ModelSwitcher.svelte';
+	import ForkConversationDialog, {
+		type ForkMode
+	} from '$lib/components/ForkConversationDialog.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Input } from '$lib/components/ui/input';
 	import FileDownIcon from '@lucide/svelte/icons/file-down';
 	import { chat } from '$lib/stores/chatStore.svelte';
 	import { getActivePath, getSiblings } from '$lib/utils/message-tree';
@@ -83,23 +84,17 @@
 
 	let forkDialogOpen = $state(false);
 	let forkAtMessageId = $state('');
-	let forkTitle = $state('');
-	let forkMode = $state<'active-path' | 'full-history'>('active-path');
+	const forkDefaultTitle = $derived(`Fork of ${conversation?.title ?? ''}`);
 
 	function handleFork(messageId: string) {
 		forkAtMessageId = messageId;
-		forkTitle = `Fork of ${conversation?.title ?? ''}`;
-		forkMode = 'active-path';
 		forkDialogOpen = true;
 	}
 
-	async function executeFork() {
-		forkDialogOpen = false;
-		const newId = chat.forkConversation(conversationId, forkAtMessageId, forkMode);
-		if (newId && forkTitle.trim()) {
-			chat.setConversationTitle(newId, forkTitle.trim());
-		}
+	async function executeFork({ title, mode }: { title: string; mode: ForkMode }) {
+		const newId = chat.forkConversation(conversationId, forkAtMessageId, mode);
 		if (newId) {
+			if (title) chat.setConversationTitle(newId, title);
 			await goto(resolve('/(chat)/chat/[conversationId]', { conversationId: newId }));
 		}
 	}
@@ -163,56 +158,8 @@
 	</div>
 </div>
 
-<Dialog.Root bind:open={forkDialogOpen}>
-	<Dialog.Content class="sm:max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>Fork conversation</Dialog.Title>
-			<Dialog.Description>Create a new conversation from this point.</Dialog.Description>
-		</Dialog.Header>
-		<div class="flex flex-col gap-3 py-2">
-			<div class="flex flex-col gap-1.5">
-				<label for="fork-title" class="text-sm font-medium">Title</label>
-				<Input id="fork-title" bind:value={forkTitle} />
-			</div>
-			<fieldset class="mt-2 flex flex-col gap-2.5">
-				<legend class="mb-1.5 text-sm font-medium">Include messages</legend>
-				<label
-					class="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 has-checked:border-primary"
-				>
-					<input
-						type="radio"
-						name="fork-mode"
-						value="active-path"
-						bind:group={forkMode}
-						class="accent-primary"
-					/>
-					<div>
-						<div class="text-xs font-medium">Active path only</div>
-						<div class="text-[11px] text-muted-foreground">Only the messages currently visible</div>
-					</div>
-				</label>
-				<label
-					class="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 has-checked:border-primary"
-				>
-					<input
-						type="radio"
-						name="fork-mode"
-						value="full-history"
-						bind:group={forkMode}
-						class="accent-primary"
-					/>
-					<div>
-						<div class="text-xs font-medium">Full history</div>
-						<div class="text-[11px] text-muted-foreground">
-							All message branches up to this point
-						</div>
-					</div>
-				</label>
-			</fieldset>
-		</div>
-		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (forkDialogOpen = false)}>Cancel</Button>
-			<Button onclick={executeFork} disabled={!forkTitle.trim()}>Fork</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+<ForkConversationDialog
+	bind:open={forkDialogOpen}
+	defaultTitle={forkDefaultTitle}
+	onConfirm={executeFork}
+/>
