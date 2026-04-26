@@ -4,6 +4,7 @@
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { cn } from '$lib/utils';
+	import { matchesShortcut, SHORTCUTS } from '$lib/config/shortcuts';
 	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
 
 	let { children } = $props();
@@ -12,16 +13,14 @@
 	let searchInputRef = $state<HTMLInputElement | null>(null);
 
 	function handleKeydown(e: KeyboardEvent) {
-		const mod = e.metaKey || e.ctrlKey;
-		if (!mod) return;
-
-		if (e.code === 'KeyK' && !e.shiftKey) {
+		if (matchesShortcut(e, SHORTCUTS.searchConversations)) {
 			e.preventDefault();
 			if (!sidebarOpen) sidebarOpen = true;
 			requestAnimationFrame(() => searchInputRef?.focus());
+			return;
 		}
 
-		if (e.code === 'KeyO' && e.shiftKey) {
+		if (matchesShortcut(e, SHORTCUTS.newConversation)) {
 			e.preventDefault();
 			goto(resolve('/'));
 		}

@@ -15,6 +15,7 @@
 	import { theme } from '$lib/stores/theme.svelte';
 	import { loadApiKey, saveApiKey } from '$lib/stores/persistence';
 	import { searchConversations } from '$lib/utils/search';
+	import { SHORTCUTS, formatShortcut } from '$lib/config/shortcuts';
 	import ConversationListItem from './ConversationListItem.svelte';
 
 	interface Props {
@@ -53,12 +54,13 @@
 	const isMac = $derived(
 		typeof navigator !== 'undefined' && navigator.userAgent.includes('Macintosh')
 	);
-	const modKey = $derived(isMac ? '⌘' : 'Ctrl');
 
-	const shortcuts = $derived([
-		{ keys: `${modKey} + K`, description: 'Search conversations' },
-		{ keys: `${modKey} + Shift + O`, description: 'New conversation' }
-	]);
+	const shortcuts = $derived(
+		Object.values(SHORTCUTS).map((s) => ({
+			keys: formatShortcut(s, isMac),
+			description: s.description
+		}))
+	);
 </script>
 
 <aside
