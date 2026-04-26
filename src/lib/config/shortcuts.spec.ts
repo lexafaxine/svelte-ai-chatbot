@@ -61,7 +61,10 @@ describe('matchesShortcut', () => {
 
 	it('rejects when shift is held but not required', () => {
 		expect(
-			matchesShortcut(ev({ code: 'KeyK', metaKey: true, shiftKey: true }), shortcut({ shift: false }))
+			matchesShortcut(
+				ev({ code: 'KeyK', metaKey: true, shiftKey: true }),
+				shortcut({ shift: false })
+			)
 		).toBe(false);
 	});
 
@@ -76,7 +79,10 @@ describe('matchesShortcut', () => {
 			false
 		);
 		expect(
-			matchesShortcut(ev({ code: 'KeyO', metaKey: true, shiftKey: true }), SHORTCUTS.newConversation)
+			matchesShortcut(
+				ev({ code: 'KeyO', metaKey: true, shiftKey: true }),
+				SHORTCUTS.newConversation
+			)
 		).toBe(true);
 	});
 });
