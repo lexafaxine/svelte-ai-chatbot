@@ -5,9 +5,8 @@
 	import ChatInput from '$lib/components/chat/ChatInput.svelte';
 	import ChatMessage from '$lib/components/chat/ChatMessage.svelte';
 	import ModelSwitcher from '$lib/components/chat/ModelSwitcher.svelte';
-	import ForkConversationDialog, {
-		type ForkMode
-	} from '$lib/components/chat/ForkConversationDialog.svelte';
+	import ForkConversationDialog from '$lib/components/chat/ForkConversationDialog.svelte';
+	import type { ForkMode } from '$lib/utils/fork';
 	import { Button } from '$lib/components/ui/button';
 	import FileDownIcon from '@lucide/svelte/icons/file-down';
 	import { chat } from '$lib/stores/chatStore.svelte';

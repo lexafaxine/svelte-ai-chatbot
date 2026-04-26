@@ -2,8 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Dialog from '$lib/components/ui/dialog';
-
-	export type ForkMode = 'active-path' | 'full-history';
+	import type { ForkMode } from '$lib/utils/fork';
 
 	interface Props {
 		open: boolean;

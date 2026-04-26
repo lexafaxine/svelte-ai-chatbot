@@ -4,6 +4,7 @@ import type { Conversation, Message, Role } from '$lib/types';
 import { DEFAULT_MODEL } from '$lib/config/models';
 import { getActivePath, getLeafDescendant } from '$lib/utils/message-tree';
 import { sanitizeTitle, makePreliminaryTitle, DEFAULT_TITLE } from '$lib/utils/title';
+import { buildFork, type ForkMode } from '$lib/utils/fork';
 import { streamChat, requestTitle } from '$lib/api/chatApi';
 import { loadConversations, saveConversations, loadMessages, saveMessages } from './persistence';
 
@@ -349,71 +350,18 @@ function createChatStore() {
 	function forkConversation(
 		conversationId: string,
 		atMessageId: string,
-		mode: 'active-path' | 'full-history'
+		mode: ForkMode
 	): string | null {
-		const conv = getConversation(conversationId);
-		if (!conv) return null;
+		const source = getConversation(conversationId);
+		if (!source) return null;
 
-		const convMessages = messages.filter((m) => m.conversationId === conversationId);
+		const sourceMessages = messages.filter((m) => m.conversationId === conversationId);
+		const result = buildFork({ source, sourceMessages, atMessageId, mode });
+		if (!result) return null;
 
-		let toClone: Message[];
-		if (mode === 'active-path') {
-			toClone = getActivePath(convMessages, atMessageId);
-		} else {
-			const byId = new Map(convMessages.map((m) => [m.id, m]));
-			const targetTime = byId.get(atMessageId)?.createdAt ?? Infinity;
-			toClone = convMessages.filter((m) => m.createdAt <= targetTime);
-		}
-
-		if (toClone.length === 0) return null;
-
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive, only used imperatively
-		const idMap = new Map<string, string>();
-		for (const m of toClone) {
-			idMap.set(m.id, nanoid());
-		}
-
-		const now = Date.now();
-		const newConvId = nanoid();
-
-		const cloned: Message[] = toClone.map((m) => ({
-			id: idMap.get(m.id)!,
-			conversationId: newConvId,
-			parentId: m.parentId && idMap.has(m.parentId) ? idMap.get(m.parentId)! : null,
-			role: m.role,
-			content: m.content,
-			model: m.model,
-			createdAt: m.createdAt,
-			...(m.reasoning ? { reasoning: m.reasoning } : {})
-		}));
-
-		const newActiveChildMap: Record<string, string> = {};
-		for (const [parentKey, childId] of Object.entries(conv.activeChildMap)) {
-			const newParentKey =
-				parentKey === 'root' ? 'root' : idMap.has(parentKey) ? idMap.get(parentKey)! : null;
-			const newChildId = idMap.get(childId);
-			if (newParentKey && newChildId) {
-				newActiveChildMap[newParentKey] = newChildId;
-			}
-		}
-
-		const newTailId = idMap.get(atMessageId) ?? null;
-
-		const newConv: Conversation = {
-			id: newConvId,
-			title: `Fork of ${conv.title}`,
-			model: conv.model,
-			tailId: newTailId,
-			activeChildMap: mode === 'active-path' ? {} : newActiveChildMap,
-			createdAt: now,
-			updatedAt: now,
-			autoTitlePending: false
-		};
-
-		conversations = [newConv, ...conversations];
-		messages = [...messages, ...cloned];
-
-		return newConvId;
+		conversations = [result.conversation, ...conversations];
+		messages = [...messages, ...result.messages];
+		return result.conversation.id;
 	}
 
 	return {
