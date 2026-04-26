@@ -2,6 +2,13 @@ import { Marked, type Tokens } from 'marked';
 import hljs from 'highlight.js';
 import DOMPurify from 'dompurify';
 
+/**
+ * HTML-escape the five characters that have meaning in HTML. Used as a
+ * safety net when syntax highlighting fails
+ *
+ * @param s — arbitrary string.
+ * @returns the same string with `&`, `<`, `>`, `"`, `'` replaced by entities.
+ */
 function escapeHtml(s: string): string {
 	return s
 		.replace(/&/g, '&amp;')
@@ -27,6 +34,11 @@ const marked = new Marked({
 	}
 });
 
+/**
+ * Render a Markdown string to sanitized HTML.
+ * @param md — the raw Markdown source. Empty string in → empty string out.
+ * @returns sanitized HTML ready for `{@html}`.
+ */
 export function renderMarkdown(md: string): string {
 	if (!md) return '';
 	const raw = marked.parse(md) as string;

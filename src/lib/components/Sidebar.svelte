@@ -51,7 +51,7 @@
 	}
 
 	const isMac = $derived(
-		typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
+		typeof navigator !== 'undefined' && navigator.userAgent.includes('Macintosh')
 	);
 	const modKey = $derived(isMac ? '⌘' : 'Ctrl');
 

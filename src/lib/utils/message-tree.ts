@@ -1,5 +1,16 @@
 import type { Message } from '$lib/types';
 
+/**
+ * Reconstruct the visible message thread for a conversation by walking
+ * `parentId` from `tailId` up to the root.
+ *
+ * @param messages — the full message list. Only
+ *   messages reachable from `tailId` are inspected;
+ * @param tailId — the tip of the visible branch
+ *   ({@link import('$lib/types').Conversation.tailId}), or `null`.
+ * @returns the messages on the active path in root-first order. Empty if
+ *   `tailId` is `null` or unknown.
+ */
 export function getActivePath(messages: Message[], tailId: string | null): Message[] {
 	if (!tailId) return [];
 	const byId = new Map(messages.map((m) => [m.id, m]));
@@ -14,6 +25,16 @@ export function getActivePath(messages: Message[], tailId: string | null): Messa
 	return path.reverse();
 }
 
+/**
+ * Collect every message that shares a parent with the given message
+ * (including the message itself). Used to render the `← N/M →` switcher.
+ *
+ * @param messages — the full message list. Filtered by both `parentId` and
+ *   `conversationId`
+ * @param messageId — the id of the message whose siblings we want.
+ * @returns siblings sorted by `createdAt` ascending. Empty if `messageId`
+ *   is unknown; a single-element array if the message has no siblings.
+ */
 export function getSiblings(messages: Message[], messageId: string): Message[] {
 	const target = messages.find((m) => m.id === messageId);
 	if (!target) return [];
@@ -23,9 +44,16 @@ export function getSiblings(messages: Message[], messageId: string): Message[] {
 }
 
 /**
- * Walk down from `startId` following `activeChildMap` until reaching a leaf.
- * When a node has children but no entry in the map, the latest child is picked
- * and recorded into `activeChildMap` (mutated in place).
+ * Walk down from `startId` following `activeChildMap` until a leaf is
+ * reached. When a node has children but no entry in the map, the latest
+ * child (highest `createdAt`) is picked and recorded into `activeChildMap`
+ *
+ * @param messages — the full message list.
+ * @param startId — the message id to start descending from.
+ * @param activeChildMap — mutated in place: any auto-picked branch decision
+ *   is written back so re-renders are stable.
+ * @returns the leaf message id reached at the bottom of the descent.
+ *   Equals `startId` if it has no children.
  */
 export function getLeafDescendant(
 	messages: Message[],

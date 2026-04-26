@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
-const gotoMock = vi.fn();
-const resolveMock = vi.fn((path) => path);
+const gotoMock = vi.hoisted(() => vi.fn());
+const resolveMock = vi.hoisted(() => vi.fn((path: string) => path));
 const pageMock = vi.hoisted(() => ({ params: {} as Record<string, string | undefined> }));
 const chatMock = vi.hoisted(() => ({
 	deleteConversation: vi.fn(),

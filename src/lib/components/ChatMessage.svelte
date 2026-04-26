@@ -74,6 +74,32 @@
 	}
 </script>
 
+{#snippet siblingNav(extraClass = '')}
+	<div class="flex items-center gap-1 text-xs text-muted-foreground {extraClass}">
+		<Button
+			variant="ghost"
+			size="icon"
+			class="h-5 w-5"
+			disabled={siblingIndex <= 0}
+			onclick={() => onSwitchSibling?.(siblings[siblingIndex - 1].id)}
+			aria-label="Previous version"
+		>
+			<ChevronLeftIcon class="h-3 w-3" />
+		</Button>
+		<span>{siblingIndex + 1} / {siblings.length}</span>
+		<Button
+			variant="ghost"
+			size="icon"
+			class="h-5 w-5"
+			disabled={siblingIndex >= siblings.length - 1}
+			onclick={() => onSwitchSibling?.(siblings[siblingIndex + 1].id)}
+			aria-label="Next version"
+		>
+			<ChevronRightIcon class="h-3 w-3" />
+		</Button>
+	</div>
+{/snippet}
+
 {#if isUser}
 	<div class="group flex w-full flex-col items-end">
 		{#if editing}
@@ -122,29 +148,7 @@
 			</div>
 		{/if}
 		{#if hasSiblings && !editing}
-			<div class="mt-1 flex w-full items-center justify-end gap-1 text-xs text-muted-foreground">
-				<Button
-					variant="ghost"
-					size="icon"
-					class="h-5 w-5"
-					disabled={siblingIndex <= 0}
-					onclick={() => onSwitchSibling?.(siblings[siblingIndex - 1].id)}
-					aria-label="Previous version"
-				>
-					<ChevronLeftIcon class="h-3 w-3" />
-				</Button>
-				<span>{siblingIndex + 1} / {siblings.length}</span>
-				<Button
-					variant="ghost"
-					size="icon"
-					class="h-5 w-5"
-					disabled={siblingIndex >= siblings.length - 1}
-					onclick={() => onSwitchSibling?.(siblings[siblingIndex + 1].id)}
-					aria-label="Next version"
-				>
-					<ChevronRightIcon class="h-3 w-3" />
-				</Button>
-			</div>
+			{@render siblingNav('mt-1 w-full justify-end')}
 		{/if}
 	</div>
 {:else}
@@ -240,29 +244,7 @@
 		{/if}
 
 		{#if hasSiblings}
-			<div class="flex items-center gap-1 text-xs text-muted-foreground">
-				<Button
-					variant="ghost"
-					size="icon"
-					class="h-5 w-5"
-					disabled={siblingIndex <= 0}
-					onclick={() => onSwitchSibling?.(siblings[siblingIndex - 1].id)}
-					aria-label="Previous version"
-				>
-					<ChevronLeftIcon class="h-3 w-3" />
-				</Button>
-				<span>{siblingIndex + 1} / {siblings.length}</span>
-				<Button
-					variant="ghost"
-					size="icon"
-					class="h-5 w-5"
-					disabled={siblingIndex >= siblings.length - 1}
-					onclick={() => onSwitchSibling?.(siblings[siblingIndex + 1].id)}
-					aria-label="Next version"
-				>
-					<ChevronRightIcon class="h-3 w-3" />
-				</Button>
-			</div>
+			{@render siblingNav()}
 		{/if}
 	</div>
 {/if}

@@ -2,35 +2,26 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ChatInput from './ChatInput.svelte';
 
-function findTextarea(container: ParentNode): HTMLTextAreaElement {
-	const el = container.querySelector('textarea');
-	if (!el) throw new Error('textarea not found');
-	return el;
-}
-
 describe('ChatInput — submission', () => {
 	it('submits trimmed content via Send button and clears the textarea', async () => {
 		const onSubmit = vi.fn();
 		const screen = render(ChatInput, { onSubmit });
-		const textarea = findTextarea(screen.container);
+		const textbox = screen.getByRole('textbox');
 
-		textarea.value = '  hello  ';
-		textarea.dispatchEvent(new Event('input', { bubbles: true }));
-
+		await textbox.fill('  hello  ');
 		await screen.getByRole('button', { name: 'Send' }).click();
 
 		expect(onSubmit).toHaveBeenCalledExactlyOnceWith('hello');
-		expect(textarea.value).toBe('');
+		await expect.element(textbox).toHaveValue('');
 	});
 
 	it('submits on Enter without shift', async () => {
 		const onSubmit = vi.fn();
 		const screen = render(ChatInput, { onSubmit });
-		const textarea = findTextarea(screen.container);
+		const textbox = screen.getByRole('textbox');
 
-		textarea.value = 'hi';
-		textarea.dispatchEvent(new Event('input', { bubbles: true }));
-		textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		await textbox.fill('hi');
+		textbox.element().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
 		expect(onSubmit).toHaveBeenCalledExactlyOnceWith('hi');
 	});
@@ -38,27 +29,30 @@ describe('ChatInput — submission', () => {
 	it('does NOT submit on Shift+Enter (lets newline through)', async () => {
 		const onSubmit = vi.fn();
 		const screen = render(ChatInput, { onSubmit });
-		const textarea = findTextarea(screen.container);
+		const textbox = screen.getByRole('textbox');
 
-		textarea.value = 'line1';
-		textarea.dispatchEvent(new Event('input', { bubbles: true }));
-		textarea.dispatchEvent(
-			new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true })
-		);
+		await textbox.fill('line1');
+		textbox
+			.element()
+			.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true }));
 
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
 
 	it('does NOT submit while IME composition is active', async () => {
+		// `isComposing` is read off the KeyboardEvent itself and the locator
+		// keyboard API doesn't expose it, so we dispatch a raw KeyboardEvent
+		// on the underlying element here.
 		const onSubmit = vi.fn();
 		const screen = render(ChatInput, { onSubmit });
-		const textarea = findTextarea(screen.container);
+		const textbox = screen.getByRole('textbox');
 
-		textarea.value = 'ニホンゴ';
-		textarea.dispatchEvent(new Event('input', { bubbles: true }));
-		textarea.dispatchEvent(
-			new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true })
-		);
+		await textbox.fill('ニホンゴ');
+		textbox
+			.element()
+			.dispatchEvent(
+				new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true })
+			);
 
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
@@ -66,11 +60,10 @@ describe('ChatInput — submission', () => {
 	it('does not submit when the textarea is blank or whitespace-only', async () => {
 		const onSubmit = vi.fn();
 		const screen = render(ChatInput, { onSubmit });
-		const textarea = findTextarea(screen.container);
+		const textbox = screen.getByRole('textbox');
 
-		textarea.value = '   ';
-		textarea.dispatchEvent(new Event('input', { bubbles: true }));
-		textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		await textbox.fill('   ');
+		textbox.element().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
@@ -79,18 +72,13 @@ describe('ChatInput — submission', () => {
 describe('ChatInput — send button disabled state', () => {
 	it('is disabled when textarea is empty', async () => {
 		const screen = render(ChatInput, { onSubmit: vi.fn() });
-		const sendBtn = screen.container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!;
-		expect(sendBtn.disabled).toBe(true);
+		await expect.element(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
 	});
 
 	it('enables once non-empty content is present', async () => {
 		const screen = render(ChatInput, { onSubmit: vi.fn() });
-		const textarea = findTextarea(screen.container);
-		textarea.value = 'hi';
-		textarea.dispatchEvent(new Event('input', { bubbles: true }));
-
-		const sendBtn = screen.container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!;
-		await vi.waitFor(() => expect(sendBtn.disabled).toBe(false));
+		await screen.getByRole('textbox').fill('hi');
+		await expect.element(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
 	});
 });
 
@@ -99,7 +87,7 @@ describe('ChatInput — streaming state', () => {
 		const onStop = vi.fn();
 		const screen = render(ChatInput, { onSubmit: vi.fn(), onStop, isStreaming: true });
 
-		expect(screen.container.querySelector('button[aria-label="Send"]')).toBeNull();
+		await expect.element(screen.getByRole('button', { name: 'Stop' })).toBeVisible();
 		await screen.getByRole('button', { name: 'Stop' }).click();
 		expect(onStop).toHaveBeenCalledOnce();
 	});
@@ -107,11 +95,10 @@ describe('ChatInput — streaming state', () => {
 	it('does not submit when the user hits Enter while streaming', async () => {
 		const onSubmit = vi.fn();
 		const screen = render(ChatInput, { onSubmit, isStreaming: true });
-		const textarea = findTextarea(screen.container);
+		const textbox = screen.getByRole('textbox');
 
-		textarea.value = 'late message';
-		textarea.dispatchEvent(new Event('input', { bubbles: true }));
-		textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		await textbox.fill('late message');
+		textbox.element().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
