@@ -13,7 +13,8 @@ aren't obvious from grepping the code.
   utilities). Plain `.ts` otherwise.
 - **Route IDs include route groups.** Use
   `resolve('/(chat)/chat/[conversationId]', ...)`, not
-  `'/chat/[conversationId]'`.
+  `'/chat/[conversationId]'`. Routes outside any group (e.g. `/`) stay
+  group-less in the resolve call.
 - **`{@html}`** is allowed only on `renderMarkdown` output, since DOMPurify
   sanitizes it. Always pair the usage with both:
   - `// safe: renderMarkdown sanitizes with DOMPurify before returning`

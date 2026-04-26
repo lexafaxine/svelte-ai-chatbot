@@ -25,6 +25,13 @@
 	let prevPathFingerprint = '';
 	let suppressNextScroll = false;
 
+	// Auto-scroll policy. Three regimes:
+	//   1. Visible thread changed (new message, switched branch): jump to
+	//      the bottom — unless `suppressNextScroll` was set by a sibling
+	//      switch that should preserve the user's current position.
+	//   2. Same thread, currently streaming, user is already near the
+	//      bottom: follow the new tokens.
+	//   3. Otherwise: leave scroll alone (user has scrolled up to read).
 	$effect(() => {
 		const fingerprint = `${activePath.length}:${conversation?.tailId ?? ''}`;
 		const isStreamingHere = streamingMsgId !== null;

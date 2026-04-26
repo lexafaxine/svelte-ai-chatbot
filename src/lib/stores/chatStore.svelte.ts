@@ -51,6 +51,19 @@ function makePreliminaryTitle(text: string): string {
 }
 
 /**
+ * Build JSON request headers with the BYOK OpenRouter key attached when
+ * the user has configured one.
+ *
+ * @returns headers ready to drop into a `fetch` call.
+ */
+function buildAuthedJSONHeaders(): Record<string, string> {
+	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+	const apiKey = loadApiKey();
+	if (apiKey) headers['x-openrouter-key'] = apiKey;
+	return headers;
+}
+
+/**
  * Build the singleton chat store. Owns the full conversation + message
  * state, the per-conversation streaming/error slots, and all CRUD,
  * branching, streaming, and forking operations.
@@ -304,13 +317,9 @@ function createChatStore() {
 		let serverError: string | null = null;
 
 		try {
-			const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-			const apiKey = loadApiKey();
-			if (apiKey) headers['x-openrouter-key'] = apiKey;
-
 			const response = await fetch('/api/chat', {
 				method: 'POST',
-				headers,
+				headers: buildAuthedJSONHeaders(),
 				body: JSON.stringify({ messages: pathUpToUser, model: conversation.model }),
 				signal: abort.signal
 			});
@@ -395,13 +404,9 @@ function createChatStore() {
 		if (!conv?.autoTitlePending) return;
 
 		try {
-			const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-			const apiKey = loadApiKey();
-			if (apiKey) headers['x-openrouter-key'] = apiKey;
-
 			const response = await fetch('/api/title', {
 				method: 'POST',
-				headers,
+				headers: buildAuthedJSONHeaders(),
 				body: JSON.stringify({
 					userMessage: userText,
 					assistantMessage: assistantText,
