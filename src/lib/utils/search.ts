@@ -36,9 +36,15 @@ function makeSnippet(content: string, matchStart: number, matchLen: number): Sni
 /**
  * Case-insensitive substring search over conversation titles and message
  * contents. Returns one entry per matching conversation, sorted by
- * `updatedAt` descending. Within a conversation we collect up to
- * MAX_SNIPPETS_PER_CONV snippets (earliest-createdAt first) and report the
- * full match count so the UI can render a "+N more" hint.
+ * `updatedAt` descending. Collects up to `MAX_SNIPPETS_PER_CONV` snippets
+ * (earliest first) and reports the full match count so the UI can render
+ * a "+N more" hint.
+ *
+ * @param query — raw search string; trimmed and lower-cased internally.
+ * @param conversations — full list of conversations to search.
+ * @param messages — full message set (all conversations).
+ * @returns matching conversations with title-match flag and message snippets,
+ *   or an empty array when `query` is blank.
  */
 export function searchConversations(
 	query: string,
