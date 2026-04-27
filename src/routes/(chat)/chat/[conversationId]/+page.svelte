@@ -15,7 +15,9 @@
 
 	const conversationId = $derived(page.params.conversationId!);
 	const conversation = $derived(chat.getConversation(conversationId));
-	const activePath = $derived(getActivePath(chat.messages, conversation?.tailId ?? null));
+	const activePath = $derived(
+		getActivePath(chat.messages, conversationId, conversation?.activeChildMap ?? {})
+	);
 	const streamingMsgId = $derived(chat.streamingMessageIdFor(conversationId));
 	const isStreaming = $derived(streamingMsgId !== null);
 	const streamError = $derived(chat.streamErrorFor(conversationId));
@@ -33,7 +35,7 @@
 	//      bottom: follow the new tokens.
 	//   3. Otherwise: leave scroll alone (user has scrolled up to read).
 	$effect(() => {
-		const fingerprint = `${activePath.length}:${conversation?.tailId ?? ''}`;
+		const fingerprint = `${activePath.length}:${activePath.at(-1)?.id ?? ''}`;
 		const isStreamingHere = streamingMsgId !== null;
 
 		if (!scrollContainer) return;
@@ -58,11 +60,12 @@
 
 	function handleSubmit(content: string) {
 		if (!conversation) return;
+		const parentId = activePath.at(-1)?.id ?? null;
 		const userMsg = chat.appendMessage(
 			conversation.id,
 			'user',
 			content,
-			conversation.tailId,
+			parentId,
 			conversation.model
 		);
 		chat.streamReply(conversation.id, userMsg.id);

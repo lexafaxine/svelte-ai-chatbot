@@ -6,7 +6,6 @@ function conv(overrides: Partial<Conversation> & { id: string }): Conversation {
 	return {
 		title: 'Source',
 		model: 'm',
-		tailId: null,
 		activeChildMap: {},
 		createdAt: 0,
 		updatedAt: 0,
@@ -37,7 +36,7 @@ describe('buildFork', () => {
 		expect(result).toBeNull();
 	});
 
-	it('active-path mode clones only the visible thread', () => {
+	it('active-path mode clones only the chain root → atMessageId', () => {
 		// a → b1 (target) ; b2 (sibling, off-path)
 		const a = msg({ id: 'a', createdAt: 1 });
 		const b1 = msg({ id: 'b1', parentId: 'a', createdAt: 2 });
@@ -52,7 +51,14 @@ describe('buildFork', () => {
 
 		expect(result.messages).toHaveLength(2);
 		expect(result.messages.some((m) => m.createdAt === 3)).toBe(false);
-		expect(result.conversation.activeChildMap).toEqual({});
+
+		// activeChildMap encodes the descent root → cloneA → cloneB1.
+		const cloneA = result.messages.find((m) => m.createdAt === 1)!;
+		const cloneB1 = result.messages.find((m) => m.createdAt === 2)!;
+		expect(result.conversation.activeChildMap).toEqual({
+			root: cloneA.id,
+			[cloneA.id]: cloneB1.id
+		});
 	});
 
 	it('full-history mode clones every message at or before atMessageId', () => {
@@ -72,7 +78,7 @@ describe('buildFork', () => {
 		expect(result.messages.some((m) => m.createdAt === 4)).toBe(false);
 	});
 
-	it('rewrites parentId and tailId through the id map', () => {
+	it('rewrites parentId through the id map and titles the new conversation', () => {
 		const a = msg({ id: 'a', createdAt: 1 });
 		const b = msg({ id: 'b', parentId: 'a', createdAt: 2 });
 
@@ -88,7 +94,6 @@ describe('buildFork', () => {
 
 		expect(cloneA.id).not.toBe('a');
 		expect(cloneB.parentId).toBe(cloneA.id);
-		expect(result.conversation.tailId).toBe(cloneB.id);
 		expect(result.conversation.title).toBe('Fork of My chat');
 	});
 });
