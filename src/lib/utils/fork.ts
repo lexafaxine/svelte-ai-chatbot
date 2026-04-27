@@ -41,7 +41,7 @@ export function buildFork(opts: BuildForkOpts): BuildForkResult | null {
 
 	let toClone: Message[];
 	if (mode === 'active-path') {
-		toClone = getChainTo(sourceMessages, atMessageId);
+		toClone = getChainTo(sourceMessages, source.id, atMessageId);
 	} else {
 		const sourceById = new Map(sourceMessages.map((m) => [m.id, m]));
 		const targetTime = sourceById.get(atMessageId)?.createdAt ?? Infinity;

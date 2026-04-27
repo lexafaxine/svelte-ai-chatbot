@@ -1,15 +1,27 @@
 import type { Message } from '$lib/types';
 
 /**
+ * Build an `id → Message` index over the messages of one conversation.
+ */
+function indexConversationById(messages: Message[], conversationId: string): Map<string, Message> {
+	return new Map(messages.filter((m) => m.conversationId === conversationId).map((m) => [m.id, m]));
+}
+
+/**
  * Walk up via `parentId` from `messageId` to the root, returning the
  * resulting linear chain in root-first order.
  *
  * @param messages — the full message list.
+ * @param conversationId — conversation that owns the chain.
  * @param messageId — the message id at the chain's tail.
  * @returns the chain in root-first order. Empty when `messageId` is unknown.
  */
-export function getChainTo(messages: Message[], messageId: string): Message[] {
-	const byId = new Map(messages.map((m) => [m.id, m]));
+export function getChainTo(
+	messages: Message[],
+	conversationId: string,
+	messageId: string
+): Message[] {
+	const byId = indexConversationById(messages, conversationId);
 	const chain: Message[] = [];
 	let current = byId.get(messageId);
 	while (current) {
@@ -23,7 +35,7 @@ export function getChainTo(messages: Message[], messageId: string): Message[] {
  * Reconstruct the visible message thread for a conversation by walking
  * `activeChildMap` from the `'root'` key down to a leaf.
  *
- * @param messages — the full message list (will be filtered by `conversationId`).
+ * @param messages — the full message list.
  * @param conversationId — conversation whose thread to reconstruct.
  * @param activeChildMap — `parentId` (or `'root'`) → chosen child id at each fork.
  * @returns the messages on the active path in root-first order. Empty if
@@ -34,9 +46,7 @@ export function getActivePath(
 	conversationId: string,
 	activeChildMap: Record<string, string>
 ): Message[] {
-	const byId = new Map(
-		messages.filter((m) => m.conversationId === conversationId).map((m) => [m.id, m])
-	);
+	const byId = indexConversationById(messages, conversationId);
 
 	const path: Message[] = [];
 	let nextId: string | undefined = activeChildMap['root'];

@@ -94,7 +94,7 @@ describe('getSiblings', () => {
 
 describe('getChainTo', () => {
 	it('returns empty when messageId is unknown', () => {
-		expect(getChainTo([msg({ id: 'a' })], 'ghost')).toEqual([]);
+		expect(getChainTo([msg({ id: 'a' })], 'c1', 'ghost')).toEqual([]);
 	});
 
 	it('walks up via parentId and returns root-first order', () => {
@@ -102,11 +102,18 @@ describe('getChainTo', () => {
 		const b = msg({ id: 'b', parentId: 'a' });
 		const c = msg({ id: 'c', parentId: 'b' });
 
-		expect(getChainTo([c, a, b], 'c').map((m) => m.id)).toEqual(['a', 'b', 'c']);
+		expect(getChainTo([c, a, b], 'c1', 'c').map((m) => m.id)).toEqual(['a', 'b', 'c']);
 	});
 
 	it('stops at the first message whose parent is missing', () => {
 		const orphan = msg({ id: 'o', parentId: 'gone' });
-		expect(getChainTo([orphan], 'o').map((m) => m.id)).toEqual(['o']);
+		expect(getChainTo([orphan], 'c1', 'o').map((m) => m.id)).toEqual(['o']);
+	});
+
+	it('ignores messages from other conversations', () => {
+		const a = msg({ id: 'a', conversationId: 'c1' });
+		const b = msg({ id: 'b', conversationId: 'c2', parentId: 'a' });
+
+		expect(getChainTo([a, b], 'c2', 'b').map((m) => m.id)).toEqual(['b']);
 	});
 });

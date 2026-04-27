@@ -226,7 +226,7 @@ function createChatStore() {
 		const conversation = getConversation(conversationId);
 		if (!conversation) return;
 
-		const pathUpToUser = getChainTo(messages, userMessageId).map((m) => ({
+		const pathUpToUser = getChainTo(messages, conversationId, userMessageId).map((m) => ({
 			role: m.role,
 			content: m.content
 		}));
