@@ -20,39 +20,41 @@ ChatGPT-like AI chatbot built with SvelteKit + Svelte 5 (runes mode). All models
 src/
 ├── routes/
 │   ├── +layout.svelte              # Root layout (hljs stylesheet swap)
-│   ├── api/chat/+server.ts         # POST: NDJSON streaming AI response
-│   ├── api/title/+server.ts        # POST: auto-generate conversation title
+│   ├── api/
+│   │   ├── chat/+server.ts         # POST: NDJSON streaming AI response
+│   │   └── title/+server.ts        # POST: auto-generate conversation title
 │   └── (chat)/
 │       ├── +layout.svelte          # Sidebar + main flex shell (responsive)
 │       ├── +page.svelte            # Landing page (new conversation)
-│       └── chat/[conversationId]/
-│           └── +page.svelte        # Conversation view + fork dialog
+│       └── chat/[conversationId]/+page.svelte   # Conversation view + fork dialog
 ├── lib/
 │   ├── types.ts                    # Message, Conversation, Role
-│   ├── config/models.ts            # MODELS list, DEFAULT_MODEL
+│   ├── api/chatApi.ts              # streamChat (NDJSON async generator) + requestTitle
+│   ├── config/
+│   │   ├── models.ts               # MODELS list, DEFAULT_MODEL
+│   │   └── shortcuts.ts            # SHORTCUTS, matchesShortcut, formatShortcut
 │   ├── stores/
-│   │   ├── chatStore.svelte.ts     # Main reactive store (all CRUD + streaming)
+│   │   ├── chatStore.svelte.ts     # Main reactive store (CRUD + streaming)
 │   │   ├── theme.svelte.ts         # Light/dark theme toggle
 │   │   └── persistence.ts          # localStorage I/O helpers
 │   ├── utils/
-│   │   ├── message-tree.ts         # getActivePath, getSiblings, getLeafDescendant
+│   │   ├── message-tree.ts         # getActivePath, getChainTo, getSiblings
+│   │   ├── fork.ts                 # buildFork (pure clone of conversation + messages)
 │   │   ├── markdown.ts             # renderMarkdown (marked + hljs + DOMPurify)
-│   │   ├── search.ts               # searchConversations (pure function)
+│   │   ├── search.ts               # searchConversations
+│   │   ├── title.ts                # sanitizeTitle, makePreliminaryTitle
 │   │   └── export.ts               # downloadConversationJSON
 │   └── components/
-│       ├── Sidebar.svelte          # Conversation list, search, settings, theme
-│       ├── ConversationListItem.svelte
-│       ├── ConversationMenu.svelte # Three-dot menu (rename + delete)
-│       ├── ChatMessage.svelte      # User/assistant bubbles with markdown
-│       ├── ChatInput.svelte        # Textarea + send/stop
-│       ├── ModelSwitcher.svelte    # Model dropdown
-│       ├── OpenRouterLogo.svelte   # Inline SVG
+│       ├── chat/                   # ChatInput, ChatMessage, ModelSwitcher,
+│       │                           # ForkConversationDialog, OpenRouterLogo
+│       ├── sidebar/                # Sidebar, ConversationListItem,
+│       │                           # ConversationMenu, SettingsDialog
 │       └── ui/                     # shadcn-svelte primitives (do not edit manually)
 ```
 
 ## Data Model
 
-Conversations use a **message tree** (not flat array). Each message has `parentId` for tree structure. `Conversation.tailId` points to the current leaf; visible path = walk up from tailId. `activeChildMap` tracks branch selections at fork points.
+Conversations use a **message tree** (not flat array). Each message has `parentId` for tree structure. The visible thread is reconstructed by walking down `Conversation.activeChildMap` from its `'root'` key — the map is the single source of truth for which branch is selected at each fork (see `getActivePath`). `getChainTo` walks the other direction (up via `parentId`) when you need the chain to a specific message id.
 
 ## Key Conventions
 

@@ -41,16 +41,19 @@ consistently.
 ```ts
 /**
  * Reconstruct the visible message thread for a conversation by walking
- * `parentId` from `tailId` up to the root.
+ * `activeChildMap` from the `'root'` key down to a leaf.
  *
- * @param messages the full message list. Only messages reachable from
- *   `tailId` are inspected.
- * @param tailId the tip of the visible branch
- *   ({@link import('$lib/types').Conversation.tailId}), or `null`.
+ * @param messages — the full message list.
+ * @param conversationId — conversation whose thread to reconstruct.
+ * @param activeChildMap — `parentId` (or `'root'`) → chosen child id at each fork.
  * @returns the messages on the active path in root-first order. Empty if
- *   `tailId` is `null` or unknown.
+ *   the map has no `'root'` entry or the chain breaks immediately.
  */
-export function getActivePath(messages: Message[], tailId: string | null): Message[] { ... }
+export function getActivePath(
+	messages: Message[],
+	conversationId: string,
+	activeChildMap: Record<string, string>
+): Message[] { ... }
 ```
 
 ## Tests
